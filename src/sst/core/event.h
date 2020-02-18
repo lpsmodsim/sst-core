@@ -35,13 +35,14 @@ public:
     typedef std::pair<uint64_t, int> id_type;
     /** Constant, default value for id_types */
     static const id_type NO_ID;
-
+    id_type ID;
 
     Event() : Activity() {
         setPriority(EVENTPRIORITY);
 #if __SST_DEBUG_EVENT_TRACKING__
         first_comp = "";
         last_comp = "";
+        ID = generateUniqueId();
 #endif
     }
     virtual ~Event() = 0;
@@ -193,6 +194,8 @@ public:
         ser & last_comp;
         ser & last_type;
         ser & last_port;
+        ser & ID.first;
+        ser & ID.second;
 #endif
 
     }    
