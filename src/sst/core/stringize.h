@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -68,18 +68,18 @@ inline std::string to_string(uint64_t val) {
 };
 
 
-inline bool strcasecmp(const std::string &s1, const std::string &s2) {
+inline bool strcasecmp(const std::string& s1, const std::string& s2) {
     return !::strcasecmp(s1.c_str(), s2.c_str());
 }
 
-inline void to_lower(std::string &s) {
+inline void to_lower(std::string& s) {
     for ( size_t i = 0 ; i < s.size() ; i++ ) {
         s[i] = std::tolower(s[i]);
     }
 }
 
 
-inline void trim(std::string &s) {
+inline void trim(std::string& s) {
     auto start = s.find_first_not_of(" \t\n\r\v\f");
     if ( start != 0 ) {
         s.replace(s.begin(), s.begin() + (start), "");
@@ -101,7 +101,7 @@ struct char_delimiter {
     /**
      * @return pair<iter, iter> = <tok_end, next_tok>
      */
-    void operator()(iter &first, iter last, std::string &token) {
+    void operator()(iter &first, iter last, std::string& token) {
         token.clear();
 
         /* Skip any leading separators */
@@ -122,14 +122,14 @@ struct escaped_list_separator {
     std::string q;
     std::string s;
 
-    escaped_list_separator(const std::string &esc="\\", const std::string &sep=",", const std::string &quote="\"")
+    escaped_list_separator(const std::string& esc="\\", const std::string& sep=",", const std::string& quote="\"")
         : e(esc), q(quote), s(sep) { }
 
 
     /**
      * @return pair<iter, iter> = <tok_end, next_tok>
      */
-    void operator()(iter &first, iter last, std::string &token) {
+    void operator()(iter &first, iter last, std::string& token) {
         token.clear();
 
         bool inside_quotes = false;
@@ -193,7 +193,7 @@ public:
     iter begin() { return iter(f, first, last); }
     iter end() { return iter(f, last, last); }
 
-    Tokenizer(const std::string &s, const TokenizerFunc& f = TokenizerFunc())
+    Tokenizer(const std::string& s, const TokenizerFunc& f = TokenizerFunc())
         : first(s.begin()), last(s.end()), f(f) { }
 
 private:

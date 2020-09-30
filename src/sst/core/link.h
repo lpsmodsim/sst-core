@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -12,12 +12,11 @@
 #ifndef SST_CORE_LINK_H
 #define SST_CORE_LINK_H
 
-#include <sst/core/sst_types.h>
+#include "sst/core/sst_types.h"
 
-#include <sst/core/event.h>
-// #include <sst/core/eventFunctor.h>
+#include "sst/core/event.h"
 
-namespace SST { 
+namespace SST {
 
 #define _LINK_DBG( fmt, args...) __DBG( DBG_LINK, Link, fmt, ## args )
 
@@ -28,7 +27,7 @@ class ActivityQueue;
 class SyncBase;
 
 class UnitAlgebra;
- 
+
   /** Link between two components. Carries events */
 class Link {
         typedef enum { POLL, HANDLER, QUEUE } Type_t;
@@ -42,19 +41,30 @@ public:
     friend class ThreadSync;
     friend class SyncManager;
     friend class ComponentInfo;
-    
+
     /** Create a new link with a given ID */
     Link(LinkId_t id);
-    
+
     virtual ~Link();
-    
-    /** set minimum link latency */
-    void setLatency(Cycle_t lat);
+
+    /** Set additional Latency to be added to events being sent out of this link
+     * @param cycles Number of Cycles to be added
+     * @param timebase Base Units of cycles
+     */
+    void addSendLatency(int cycles, const std::string& timebase);
+
+    /** Set additional Latency to be added to events being sent out of this link
+     * @param cycles Number of Cycles to be added
+     * @param timebase Base Units of cycles
+     */
+    void addSendLatency(SimTime_t cycles, TimeConverter* timebase);
+
     /** Set additional Latency to be added on to events coming in on this link.
      * @param cycles Number of Cycles to be added
      * @param timebase Base Units of cycles
      */
-    void addRecvLatency(int cycles, std::string timebase);
+    void addRecvLatency(int cycles, const std::string& timebase);
+
     /** Set additional Latency to be added on to events coming in on this link.
      * @param cycles Number of Cycles to be added
      * @param timebase Base Units of cycles
@@ -99,7 +109,7 @@ public:
 
     /** Retrieve a pending event from the Link. For links which do not
       have a set event handler, they can be polled with this function.
-      Returns NULL if there is no pending event.
+      Returns nullptr if there is no pending event.
     */
     Event* recv();
 
@@ -122,7 +132,7 @@ public:
     void sendUntimedData(Event* data);
     /** Receive an event (if any) during the init() phase */
     Event* recvUntimedData();
-    
+
     /** Send data during the complete() phase. */
     void sendInitData(Event* init_data) {
         sendUntimedData(init_data);
@@ -194,20 +204,23 @@ protected:
 private:
     Link( const Link& l );
 
+    /** Set minimum link latency */
+    void setLatency(Cycle_t lat);
+
     void sendUntimedData_sync(Event* data);
     void finalizeConfiguration();
     void prepareForComplete();
-    
+
     Type_t type;
     LinkId_t id;
     bool configured;
-    
+
 #ifdef __SST_DEBUG_EVENT_TRACKING__
     std::string comp;
     std::string ctype;
     std::string port;
 #endif
-    
+
 };
 
 /** Self Links are links from a component to itself */

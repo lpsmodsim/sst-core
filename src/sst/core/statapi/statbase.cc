@@ -1,26 +1,27 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#include <sst_config.h>
+#include "sst_config.h"
+#include "sst/core/statapi/statbase.h"
 
-#include <sst/core/baseComponent.h>
-#include <sst/core/statapi/statbase.h>
-#include <sst/core/statapi/stataccumulator.h>
-#include <sst/core/statapi/stathistogram.h>
-#include <sst/core/statapi/statnull.h>
-#include <sst/core/statapi/statuniquecount.h>
-#include <sst/core/statapi/statoutputconsole.h>
-#include <sst/core/statapi/statoutputcsv.h>
-#include <sst/core/statapi/statoutputjson.h>
-#include <sst/core/statapi/statoutputtxt.h>
+#include "sst/core/simulation.h"
+#include "sst/core/baseComponent.h"
+#include "sst/core/statapi/stataccumulator.h"
+#include "sst/core/statapi/stathistogram.h"
+#include "sst/core/statapi/statnull.h"
+#include "sst/core/statapi/statuniquecount.h"
+#include "sst/core/statapi/statoutputconsole.h"
+#include "sst/core/statapi/statoutputcsv.h"
+#include "sst/core/statapi/statoutputjson.h"
+#include "sst/core/statapi/statoutputtxt.h"
 
 namespace SST {
 namespace Statistics {
@@ -52,28 +53,44 @@ const std::string& StatisticBase::getCompName() const
     return m_component->getName();
 }
 
-void StatisticBase::incrementCollectionCount()  
+void
+Statistic<void>::outputStatisticFields(StatisticFieldsOutput* UNUSED(statOutput), bool UNUSED(EndOfSimFlag))
 {
-    m_currentCollectionCount++;
+  Simulation::getSimulation()->getSimulationOutput().fatal(CALL_INFO, 1,
+    "void statistic %s, type %s for component %s does not support outputing fields",
+    getStatTypeName().c_str(), getFullStatName().c_str(), getComponent()->getName().c_str());
+}
+
+void
+Statistic<void>::registerOutputFields(StatisticFieldsOutput* UNUSED(statOutput))
+{
+  Simulation::getSimulation()->getSimulationOutput().fatal(CALL_INFO, 1,
+    "void statistic %s, type %s for component %s does not support outputing fields",
+    getStatTypeName().c_str(), getFullStatName().c_str(), getComponent()->getName().c_str());
+}
+
+void StatisticBase::incrementCollectionCount(uint64_t increment)
+{
+    m_currentCollectionCount += increment;
     checkEventForOutput();
-}                       
+}
 
 void StatisticBase::setCollectionCount(uint64_t newCount)
 {
     m_currentCollectionCount = newCount;
     checkEventForOutput();
-}   
+}
 
-void StatisticBase::resetCollectionCount() 
+void StatisticBase::resetCollectionCount()
 {
     m_currentCollectionCount = 0;
 }
 
-void StatisticBase::setCollectionCountLimit(uint64_t newLimit) 
-{   
+void StatisticBase::setCollectionCountLimit(uint64_t newLimit)
+{
     m_collectionCountLimit = newLimit;
     checkEventForOutput();
-}  
+}
 
 std::string StatisticBase::buildStatisticFullName(const char* compName, const char* statName, const char* statSubId)
 {
@@ -83,7 +100,7 @@ std::string StatisticBase::buildStatisticFullName(const char* compName, const ch
 std::string StatisticBase::buildStatisticFullName(const std::string& compName, const std::string& statName, const std::string& statSubId)
 {
     std::string statFullNameRtn;
-    
+
     statFullNameRtn = compName + ".";
     statFullNameRtn += statName;
     if (statSubId != "") {
@@ -93,7 +110,7 @@ std::string StatisticBase::buildStatisticFullName(const std::string& compName, c
     return statFullNameRtn;
 }
 
-void StatisticBase::initializeProperties() 
+void StatisticBase::initializeProperties()
 {
     m_statFullName = buildStatisticFullName(getCompName(), m_statName, m_statSubId);
     m_registeredCollectionMode = STAT_MODE_UNDEFINED;
@@ -114,7 +131,7 @@ void StatisticBase::initializeProperties()
 
 void StatisticBase::checkEventForOutput()
 {
-    if ( (m_registeredCollectionMode == STAT_MODE_COUNT) && 
+    if ( (m_registeredCollectionMode == STAT_MODE_COUNT) &&
          (m_currentCollectionCount >= m_collectionCountLimit) &&
          (1 <= m_collectionCountLimit) ) {
         // Dont output if CountLimit is zero
@@ -122,7 +139,7 @@ void StatisticBase::checkEventForOutput()
     }
 }
 
-bool StatisticBase::operator==(StatisticBase& checkStat) 
+bool StatisticBase::operator==(StatisticBase& checkStat)
 {
     return (getFullStatName()  == checkStat.getFullStatName());
 }
@@ -132,7 +149,7 @@ void StatisticBase::delayOutput(const char* delayTime)
     // Make sure only a single output delay is active
     if (false == m_outputDelayed) {
 
-        // Save the Stat Output Enable setting and then disable the output 
+        // Save the Stat Output Enable setting and then disable the output
         m_savedOutputEnabled = m_outputEnabled;
         m_outputEnabled = false;
         m_outputDelayed = true;
@@ -141,11 +158,11 @@ void StatisticBase::delayOutput(const char* delayTime)
     }
 }
 
-void StatisticBase::delayCollection(const char* delayTime) 
+void StatisticBase::delayCollection(const char* delayTime)
 {
     // Make sure only a single collection delay is active
     if (false == m_collectionDelayed) {
-    
+
         // Save the Stat Enable setting and then disable the Stat for collection
         m_savedStatEnabled = m_statEnabled;
         m_statEnabled = false;

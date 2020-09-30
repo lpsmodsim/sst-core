@@ -1,17 +1,18 @@
 /*
  *  This file is part of SST/macroscale:
  *               The macroscale architecture simulator from the SST suite.
- *  Copyright (c) 2009-2019 NTESS.
+ *  Copyright (c) 2009-2020 NTESS.
  *  This software is distributed under the BSD License.
  *  Under the terms of Contract DE-NA0003525 with NTESS,
  *  the U.S. Government retains certain rights in this software.
  *  For more information, see the LICENSE file in the top
  *  SST/macroscale directory.
  */
+#include "sst_config.h"
 
-#include <sst/core/serialization/serializable.h>
-#include <sst/core/serialization/statics.h>
-#include <sst/core/output.h>
+#include "sst/core/serialization/serializable.h"
+#include "sst/core/serialization/statics.h"
+#include "sst/core/output.h"
 
 #include <cstring>
 #include <iostream>
@@ -21,21 +22,21 @@ namespace Core {
 namespace Serialization {
 
 static need_delete_statics<serializable_factory> del_statics;
-serializable_factory::builder_map* serializable_factory::builders_ = 0;
+serializable_factory::builder_map* serializable_factory::builders_ = nullptr;
 
 void
 serializable::serializable_abort(uint32_t line, const char* file, const char* func, const char* obj)
 {
     SST::Output ser_abort("", 5, SST::Output::PrintAll, SST::Output::STDERR);
     ser_abort.fatal(line, file, func, 1,
-							      "ERROR: type %s should not be serialized\n",obj);
+                                  "ERROR: type %s should not be serialized\n",obj);
 }
 
 uint32_t
 // serializable_factory::add_builder(serializable_builder* builder, uint32_t cls_id)
 serializable_factory::add_builder(serializable_builder* builder, const char* name)
 {
-  if (builders_ == 0) {
+  if (builders_ == nullptr) {
     builders_ = new builder_map;
   }
 
@@ -54,7 +55,7 @@ serializable_factory::add_builder(serializable_builder* builder, const char* nam
 
   builder_map& bmap = *builders_;
   serializable_builder*& current = bmap[hash];
-  if (current != 0){
+  if (current != nullptr){
     // std::cerr << sprockit::printf(
     //   "amazingly %s and %s both hash to same serializable id %u",
     //   current->name(), builder->name(), hash) << std::endl;

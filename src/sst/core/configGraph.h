@@ -1,12 +1,12 @@
 // -*- c++ -*-
 
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -21,16 +21,14 @@
 #include <set>
 #include <climits>
 
-#include <sst/core/sparseVectorMap.h>
-#include <sst/core/params.h>
-#include <sst/core/statapi/statbase.h>
-#include <sst/core/statapi/statoutput.h>
-#include <sst/core/rankInfo.h>
-#include <sst/core/unitAlgebra.h>
+#include "sst/core/sparseVectorMap.h"
+#include "sst/core/params.h"
+#include "sst/core/statapi/statbase.h"
+#include "sst/core/statapi/statoutput.h"
+#include "sst/core/rankInfo.h"
+#include "sst/core/unitAlgebra.h"
 
-#include <sst/core/serialization/serializable.h>
-
-// #include "sst/core/simulation.h"
+#include "sst/core/serialization/serializable.h"
 
 using namespace SST::Statistics;
 
@@ -61,7 +59,7 @@ public:
 
     // inline const std::string& key() const { return name; }
     inline LinkId_t key() const { return id; }
-    
+
     /** Return the minimum latency of this link (from both sides) */
     SimTime_t getMinLatency() const {
         if ( latency[0] < latency[1] ) return latency[0];
@@ -95,7 +93,7 @@ public:
     }
 
     ImplementSerializable(SST::ConfigLink)
-    
+
 private:
     friend class ConfigGraph;
     ConfigLink(LinkId_t id) :
@@ -109,7 +107,7 @@ private:
         component[1] = ULONG_MAX;
     }
 
-    ConfigLink(LinkId_t id, const std::string &n) :
+    ConfigLink(LinkId_t id, const std::string& n) :
         id(id),
         no_cut(false)
     {
@@ -136,14 +134,14 @@ public:
     size_t outputID;
     UnitAlgebra outputFrequency;
 
-    ConfigStatGroup(const std::string &name) : name(name), outputID(0) { }
+    ConfigStatGroup(const std::string& name) : name(name), outputID(0) { }
     ConfigStatGroup() {} /* Do not use */
 
 
     bool addComponent(ComponentId_t id);
-    bool addStatistic(const std::string &name, Params &p);
+    bool addStatistic(const std::string& name, Params &p);
     bool setOutput(size_t id);
-    bool setFrequency(const std::string &freq);
+    bool setFrequency(const std::string& freq);
 
     /**
      * Checks to make sure that all components in the group support all
@@ -173,10 +171,10 @@ public:
     std::string type;
     Params params;
 
-    ConfigStatOutput(const std::string &type) : type(type) { }
+    ConfigStatOutput(const std::string& type) : type(type) { }
     ConfigStatOutput() { }
 
-    void addParameter(const std::string &key, const std::string &val) {
+    void addParameter(const std::string& key, const std::string& val) {
         params.insert(key, val);
     }
 
@@ -195,7 +193,7 @@ typedef SparseVectorMap<LinkId_t,ConfigLink> ConfigLinkMap_t;
 class ConfigComponent : public SST::Core::Serialization::serializable {
 public:
     ComponentId_t                 id;                /*!< Unique ID of this component */
-    ConfigComponent*              ulitmate_parent;   /*!< Ultimate parent of this component */
+    ConfigGraph*                  graph;             /*!< Graph that this component belongs to */
     std::string                   name;              /*!< Name of this component, or slot name for subcomp */
     int                           slot_num;          /*!< Slot number.  Only valid for subcomponents */
     std::string                   type;              /*!< Type of this component */
@@ -203,11 +201,12 @@ public:
     RankInfo                      rank;              /*!< Parallel Rank for this component */
     std::vector<LinkId_t>         links;             /*!< List of links connected */
     Params                        params;            /*!< Set of Parameters */
+    uint8_t                       statLoadLevel;     /*!< Statistic load level for this component */
     std::vector<Statistics::StatisticInfo> enabledStatistics; /*!< List of statistics to be enabled */
     std::vector<ConfigComponent>  subComponents; /*!< List of subcomponents */
     std::vector<double>           coords;
-    uint16_t                      nextSubID;         /*!< Next subID to use for children */
-    
+    uint16_t                      nextSubID;         /*!< Next subID to use for children, if component, if subcomponent, subid of parent */
+
     static constexpr ComponentId_t null_id = std::numeric_limits<ComponentId_t>::max();
 
     inline const ComponentId_t& key()const { return id; }
@@ -219,19 +218,27 @@ public:
     ConfigComponent cloneWithoutLinksOrParams() const;
 
     ~ConfigComponent() {}
-    ConfigComponent() : id(null_id) {}
+    ConfigComponent() : id(null_id), statLoadLevel(STATISTICLOADLEVELUNINITIALIZED), nextSubID(1) { }
 
+    ComponentId_t getNextSubComponentID();
+
+    ConfigComponent* getParent() const;
+    std::string getFullName() const;
+
+    
     void setRank(RankInfo r);
     void setWeight(double w);
     void setCoordinates(const std::vector<double> &c);
-    void addParameter(const std::string &key, const std::string &value, bool overwrite);
-    ConfigComponent* addSubComponent(ComponentId_t, const std::string &name, const std::string &type, int slot);
+    void addParameter(const std::string& key, const std::string& value, bool overwrite);
+    ConfigComponent* addSubComponent(ComponentId_t, const std::string& name, const std::string& type, int slot);
     ConfigComponent* findSubComponent(ComponentId_t);
     const ConfigComponent* findSubComponent(ComponentId_t) const;
-    void enableStatistic(const std::string &statisticName, bool recursively = false);
-    void addStatisticParameter(const std::string &statisticName, const std::string &param, const std::string &value, bool recursively = false);
-    void setStatisticParameters(const std::string &statisticName, const Params &params, bool recursively = false);
-
+    ConfigComponent* findSubComponentByName(const std::string& name);
+    void enableStatistic(const std::string& statisticName, bool recursively = false);
+    void addStatisticParameter(const std::string& statisticName, const std::string& param, const std::string& value, bool recursively = false);
+    void setStatisticParameters(const std::string& statisticName, const Params &params, bool recursively = false);
+    void setStatisticLoadLevel(uint8_t level, bool recursively = false);
+    
     std::vector<LinkId_t> allLinks() const;
 
     void serialize_order(SST::Core::Serialization::serializer &ser) override {
@@ -244,8 +251,11 @@ public:
         ser & rank.thread;
         ser & links;
         ser & params;
+        ser & statLoadLevel;
         ser & enabledStatistics;
         ser & subComponents;
+        ser & coords;
+        ser & nextSubID;
     }
 
     ImplementSerializable(SST::ConfigComponent)
@@ -253,24 +263,34 @@ public:
 private:
 
     friend class ConfigGraph;
+    /** Checks to make sure port names are valid and that a port isn't used twice
+     */
+    void checkPorts() const;
+
     /** Create a new Component */
-    ConfigComponent(ComponentId_t id, std::string name, std::string type, float weight, RankInfo rank) :
+    ConfigComponent(ComponentId_t id, ConfigGraph* graph, const std::string& name, const std::string& type, float weight, RankInfo rank) :
         id(id),
+        graph(graph),
         name(name),
         type(type),
         weight(weight),
-        rank(rank)
+        rank(rank),
+        statLoadLevel(STATISTICLOADLEVELUNINITIALIZED),
+        nextSubID(1)
     {
         coords.resize(3, 0.0);
     }
 
-    ConfigComponent(ComponentId_t id, std::string name, int slot_num, std::string type, float weight, RankInfo rank) :
+    ConfigComponent(ComponentId_t id, ConfigGraph* graph, uint16_t parent_subid, const std::string& name, int slot_num, const std::string& type, float weight, RankInfo rank) :
         id(id),
+        graph(graph),
         name(name),
         slot_num(slot_num),
         type(type),
         weight(weight),
-        rank(rank)
+        rank(rank),
+        statLoadLevel(STATISTICLOADLEVELUNINITIALIZED),
+        nextSubID(parent_subid)
     {
         coords.resize(3, 0.0);
     }
@@ -285,27 +305,32 @@ private:
 // typedef SparseVectorMap<std::string,ConfigLink> ConfigLinkMap_t;
 /** Map IDs to Components */
 typedef SparseVectorMap<ComponentId_t,ConfigComponent> ConfigComponentMap_t;
+/** Map names to Components */
+typedef std::map<std::string,ComponentId_t> ConfigComponentNameMap_t;
 /** Map names to Parameter Sets: XML only */
 typedef std::map<std::string,Params*> ParamsMap_t;
 /** Map names to variable values:  XML only */
 typedef std::map<std::string,std::string> VariableMap_t;
 
 class PartitionGraph;
-    
+
 /** A Configuration Graph
  *  A graph representing Components and Links
  */
 class ConfigGraph : public SST::Core::Serialization::serializable {
 public:
     /** Print the configuration graph */
-	void print(std::ostream &os) const {
-		os << "Printing graph" << std::endl;
-		for (ConfigComponentMap_t::const_iterator i = comps.begin() ; i != comps.end() ; ++i) {
-			i->print(os);
-		}
-	}
+    void print(std::ostream &os) const {
+        os << "Printing graph" << std::endl;
+        for (ConfigComponentMap_t::const_iterator i = comps.begin() ; i != comps.end() ; ++i) {
+            i->print(os);
+        }
+    }
 
-    ConfigGraph() {
+    ConfigGraph() :
+        output(Output::getDefaultObject()),
+        nextComponentId(0)
+    {
         links.clear();
         comps.clear();
         // Init the statistic output settings
@@ -314,7 +339,7 @@ public:
     }
 
     size_t getNumComponents() { return comps.data.size(); }
-    
+
     /** Helper function to set all the ranks to the same value */
     void setComponentRanks(RankInfo rank);
     /** Checks to see if rank contains at least one component */
@@ -325,16 +350,16 @@ public:
 
     // API for programmatic initialization
     /** Create a new component with weight and rank */
-    ComponentId_t addComponent(ComponentId_t id, std::string name, std::string type, float weight, RankInfo rank);
+    ComponentId_t addComponent(const std::string& name, const std::string& type, float weight, RankInfo rank);
     /** Create a new component */
-    ComponentId_t addComponent(ComponentId_t id, std::string name, std::string type);
+    ComponentId_t addComponent(const std::string& name, const std::string& type);
 
 
     /** Set the statistic output module */
-    void setStatisticOutput(const std::string &name);
+    void setStatisticOutput(const std::string& name);
 
     /** Add parameter to the statistic output module */
-    void addStatisticOutputParameter(const std::string &param, const std::string &value);
+    void addStatisticOutputParameter(const std::string& param, const std::string& value);
 
     /** Set a set of parameter to the statistic output module */
     void setStatisticOutputParams(const Params& p);
@@ -343,22 +368,23 @@ public:
     void setStatisticLoadLevel(uint8_t loadLevel);
 
     /** Enable a Statistics assigned to a component */
-    void enableStatisticForComponentName(std::string ComponentName, std::string statisticName);
-    void enableStatisticForComponentType(std::string ComponentType, std::string statisticName);
+    void enableStatisticForComponentName(const std::string& ComponentName, const std::string& statisticName, bool recursive = false);
+    void enableStatisticForComponentType(const std::string& ComponentType, const std::string& statisticName, bool recursive = false);
 
     /** Add Parameters for a Statistic */
-    void addStatisticParameterForComponentName(const std::string &ComponentName, const std::string &statisticName, const std::string &param, const std::string &value);
-    void addStatisticParameterForComponentType(const std::string &ComponentType, const std::string &statisticName, const std::string &param, const std::string &value);
+    void addStatisticParameterForComponentName(const std::string& ComponentName, const std::string& statisticName, const std::string& param, const std::string& value, bool recursively);
+    void addStatisticParameterForComponentType(const std::string& ComponentType, const std::string& statisticName, const std::string& param, const std::string& value, bool recursively);
+    void setStatisticLoadLevelForComponentType(const std::string& compType, uint8_t level, bool recursively = false);
 
     std::vector<ConfigStatOutput>& getStatOutputs() {return statOutputs;}
     const ConfigStatOutput& getStatOutput(size_t index = 0) const {return statOutputs[index];}
     long getStatLoadLevel() const {return statLoadLevel;}
 
     /** Add a Link to a Component on a given Port */
-    void addLink(ComponentId_t comp_id, std::string link_name, std::string port, std::string latency_str, bool no_cut = false);
+    void addLink(ComponentId_t comp_id, const std::string& link_name, const std::string& port, const std::string& latency_str, bool no_cut = false);
 
     /** Set a Link to be no-cut */
-    void setLinkNoCut(std::string link_name);
+    void setLinkNoCut(const std::string& link_name);
 
     /** Perform any post-creation cleanup processes */
     void postCreationCleanup();
@@ -373,7 +399,7 @@ public:
     }
 
     const std::map<std::string, ConfigStatGroup>& getStatGroups() const { return statGroups; }
-    ConfigStatGroup* getStatGroup(const std::string &name) {
+    ConfigStatGroup* getStatGroup(const std::string& name) {
         auto found = statGroups.find(name);
         if ( found == statGroups.end() ) {
             bool ok;
@@ -384,6 +410,7 @@ public:
 
     bool containsComponent(ComponentId_t id) const;
     ConfigComponent* findComponent(ComponentId_t);
+    ConfigComponent* findComponentByName(const std::string& name);
     const ConfigComponent* findComponent(ComponentId_t) const;
 
     /** Return the map of links */
@@ -400,23 +427,27 @@ public:
     void getConnectedNoCutComps(ComponentId_t start, ComponentIdMap_t& group);
 
     void serialize_order(SST::Core::Serialization::serializer &ser) override
-	{
-		ser & links;
-		ser & comps;
-		ser & statOutputs;
-		ser & statLoadLevel;
+    {
+        ser & links;
+        ser & comps;
+        ser & statOutputs;
+        ser & statLoadLevel;
         ser & statGroups;
-	}
+    }
 
 private:
     friend class Simulation;
     friend class SSTSDLModelDefinition;
 
+    Output& output;
+
+    ComponentId_t nextComponentId;
+
     ConfigLinkMap_t      links;
     ConfigComponentMap_t comps;
+    ConfigComponentNameMap_t compsByName;
     std::map<std::string, ConfigStatGroup> statGroups;
 
-    // temporary as a test
     std::map<std::string,LinkId_t> link_names;
 
     std::vector<ConfigStatOutput> statOutputs; // [0] is default
@@ -447,7 +478,7 @@ public:
         weight(0),
         rank(RankInfo(RankInfo::UNASSIGNED, 0))
     {}
-    
+
     // PartitionComponent(ComponentId_t id, ConfigGraph* graph, const ComponentIdMap_t& group);
     void print(std::ostream &os, const PartitionGraph* graph) const;
 
@@ -477,7 +508,7 @@ public:
     SimTime_t getMinLatency() const {
         if ( latency[0] < latency[1] ) return latency[0];
         return latency[1];    }
-    
+
     /** Print the Link information */
     void print(std::ostream &os) const {
         os << "    Link " << id << std::endl;
@@ -498,12 +529,12 @@ private:
 
 public:
     /** Print the configuration graph */
-	void print(std::ostream &os) const {
-		os << "Printing graph" << std::endl;
-		for (PartitionComponentMap_t::const_iterator i = comps.begin() ; i != comps.end() ; ++i) {
-			i->print(os,this);
-		}
-	}
+    void print(std::ostream &os) const {
+        os << "Printing graph" << std::endl;
+        for (PartitionComponentMap_t::const_iterator i = comps.begin() ; i != comps.end() ; ++i) {
+            i->print(os,this);
+        }
+    }
 
     PartitionComponentMap_t& getComponentMap() {
         return comps;

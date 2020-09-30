@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -12,18 +12,16 @@
 #ifndef SST_CORE_CORE_SHAREDREGIONIMPL_H
 #define SST_CORE_CORE_SHAREDREGIONIMPL_H
 
-#include <sst/core/sst_types.h>
-#include <sst/core/warnmacros.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/warnmacros.h"
 
 #include <string>
 #include <vector>
-#include <set>
 #include <map>
 #include <mutex>
 
-#include <sst/core/sharedRegion.h>
-#include <sst/core/serialization/serializable.h>
-//#include <sst/core/changeSet.h>
+#include "sst/core/sharedRegion.h"
+#include "sst/core/serialization/serializable.h"
 
 namespace SST {
 
@@ -35,8 +33,8 @@ public:
     size_t offset;
     size_t length;
     /*const*/ uint8_t *data;
-    
-    ChangeSet(size_t offset, size_t length, /*const*/ uint8_t *data = NULL) : offset(offset), length(length), data(data) { }
+
+    ChangeSet(size_t offset, size_t length, /*const*/ uint8_t *data = nullptr) : offset(offset), length(length), data(data) { }
 
     void serialize_order(SST::Core::Serialization::serializer &ser) override {
         ser & offset;
@@ -50,11 +48,11 @@ public:
         ser & SST::Core::Serialization::array(data,length);
         // ser.binary(data,length);
 
-    }    
-    
+    }
+
     ImplementSerializable(SST::ChangeSet)
 
-    
+
 };
 
 class RegionInfo {
@@ -67,7 +65,7 @@ public:
 
     public:
         RegionMergeInfo() {}
-        RegionMergeInfo(int rank, const std::string &key) : rank(rank), key(key) { }
+        RegionMergeInfo(int rank, const std::string& key) : rank(rank), key(key) { }
         virtual ~RegionMergeInfo() { }
 
         virtual bool merge(RegionInfo *UNUSED(ri)) { return true; }
@@ -76,8 +74,8 @@ public:
         void serialize_order(SST::Core::Serialization::serializer &ser) override {
             ser & rank;
             ser & key;
-        }    
-        
+        }
+
         ImplementSerializable(SST::RegionInfo::RegionMergeInfo)
     };
 
@@ -89,7 +87,7 @@ public:
 
     public:
         BulkMergeInfo() : RegionMergeInfo() {}
-        BulkMergeInfo(int rank, const std::string &key, void *data, size_t length) : RegionMergeInfo(rank, key),
+        BulkMergeInfo(int rank, const std::string& key, void *data, size_t length) : RegionMergeInfo(rank, key),
             length(length), data(data)
         { }
 
@@ -111,8 +109,8 @@ public:
             // }
             ser & SST::Core::Serialization::array(data,length);
             // ser.binary(data,length);
-        }    
-        
+        }
+
         ImplementSerializable(SST::RegionInfo::BulkMergeInfo)
     };
 
@@ -122,7 +120,7 @@ public:
         std::vector<ChangeSet> changeSets;
     public:
         ChangeSetMergeInfo() : RegionMergeInfo() {}
-        ChangeSetMergeInfo(int rank, const std::string & key,
+        ChangeSetMergeInfo(int rank, const std::string& key,
                 // std::vector<SharedRegionMerger::ChangeSet> & changeSets) : RegionMergeInfo(rank, key),
                 std::vector<ChangeSet> & changeSets) : RegionMergeInfo(rank, key),
             changeSets(changeSets)
@@ -134,8 +132,8 @@ public:
         void serialize_order(SST::Core::Serialization::serializer &ser) override {
             RegionInfo::RegionMergeInfo::serialize_order(ser);
             ser & changeSets;
-        }    
-        
+        }
+
         ImplementSerializable(SST::RegionInfo::ChangeSetMergeInfo)
     };
 
@@ -161,12 +159,12 @@ private:
 
 
 public:
-    RegionInfo() : realSize(0), apparentSize(0), memory(NULL),
-        shareCount(0), publishCount(0), merger(NULL),
+    RegionInfo() : realSize(0), apparentSize(0), memory(nullptr),
+        shareCount(0), publishCount(0), merger(nullptr),
         didBulk(false), initialized(false), ready(false)
     { }
     ~RegionInfo();
-    bool initialize(const std::string &key, size_t size, uint8_t initByte, SharedRegionMerger *mergeObj);
+    bool initialize(const std::string& key, size_t size, uint8_t initByte, SharedRegionMerger *mergeObj);
     bool isInitialized() const { return initialized; }
     bool isReady() const { return ready; }
 
@@ -185,7 +183,7 @@ public:
     size_t getSize() const { return apparentSize; }
     size_t getNumSharers() const { return shareCount; }
 
-    bool shouldMerge() const { return (NULL != merger); }
+    bool shouldMerge() const { return (nullptr != merger); }
     SharedRegionMerger* getMerger() { return merger; }
     /** Returns the size of the data to be transferred */
     RegionMergeInfo* getMergeInfo();
@@ -230,8 +228,8 @@ public:
     SharedRegionManagerImpl();
     ~SharedRegionManagerImpl();
 
-    virtual SharedRegion* getLocalSharedRegion(const std::string &key, size_t size, uint8_t initByte = 0) override;
-    virtual SharedRegion* getGlobalSharedRegion(const std::string &key, size_t size, SharedRegionMerger *merger = NULL, uint8_t initByte = 0) override;
+    virtual SharedRegion* getLocalSharedRegion(const std::string& key, size_t size, uint8_t initByte = 0) override;
+    virtual SharedRegion* getGlobalSharedRegion(const std::string& key, size_t size, SharedRegionMerger *merger = nullptr, uint8_t initByte = 0) override;
 
     virtual void publishRegion(SharedRegion*) override;
     virtual bool isRegionReady(const SharedRegion*) override;

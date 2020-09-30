@@ -1,24 +1,24 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#include <sst_config.h>
+#include "sst_config.h"
+#include "sst/core/statapi/statoutputconsole.h"
 
-#include <sst/core/simulation.h>
-#include <sst/core/statapi/statoutputconsole.h>
+#include "sst/core/simulation.h"
 
 namespace SST {
 namespace Statistics {
 
-StatisticOutputConsole::StatisticOutputConsole(Params& outputParameters) 
-    : StatisticOutput (outputParameters)
+StatisticOutputConsole::StatisticOutputConsole(Params& outputParameters)
+    : StatisticFieldsOutput (outputParameters)
 {
     Output out = Simulation::getSimulationOutput();
     out.verbose(CALL_INFO, 1, 0, " : StatisticOutputConsole enabled...\n");
@@ -28,7 +28,7 @@ StatisticOutputConsole::StatisticOutputConsole(Params& outputParameters)
 bool StatisticOutputConsole::checkOutputParameters()
 {
     bool foundKey;
-    
+
     // Look for Help Param
     getOutputParameters().find<std::string>("help", "1", foundKey);
     if (true == foundKey) {
@@ -45,15 +45,15 @@ void StatisticOutputConsole::printUsage()
     out.output(" : help = Force Statistic Output to display usage\n");
 }
 
-void StatisticOutputConsole::startOfSimulation() 
+void StatisticOutputConsole::startOfSimulation()
 {
 }
 
-void StatisticOutputConsole::endOfSimulation() 
+void StatisticOutputConsole::endOfSimulation()
 {
 }
 
-void StatisticOutputConsole::implStartOutputEntries(StatisticBase* statistic) 
+void StatisticOutputConsole::implStartOutputEntries(StatisticBase* statistic)
 {
     // Starting Output
     m_OutputBuffer.clear();
@@ -63,7 +63,7 @@ void StatisticOutputConsole::implStartOutputEntries(StatisticBase* statistic)
     m_OutputBuffer += " : ";
 }
 
-void StatisticOutputConsole::implStopOutputEntries() 
+void StatisticOutputConsole::implStopOutputEntries()
 {
     // Done with Output
     printf(" %s\n", m_OutputBuffer.c_str());
@@ -74,7 +74,7 @@ void StatisticOutputConsole::outputField(fieldHandle_t fieldHandle, int32_t data
     char buffer[256];
     StatisticFieldInfo* FieldInfo = getRegisteredField(fieldHandle);
 
-    if (NULL != FieldInfo) {
+    if (nullptr != FieldInfo) {
         const char* typeName = getFieldTypeShortName(FieldInfo->getFieldType());
         sprintf(buffer, "%s.%s = %" PRId32, FieldInfo->getFieldName().c_str(), typeName, data);
         m_OutputBuffer += buffer;
@@ -87,7 +87,7 @@ void StatisticOutputConsole::outputField(fieldHandle_t fieldHandle, uint32_t dat
     char buffer[256];
     StatisticFieldInfo* FieldInfo = getRegisteredField(fieldHandle);
 
-    if (NULL != FieldInfo) {
+    if (nullptr != FieldInfo) {
         const char* typeName = getFieldTypeShortName(FieldInfo->getFieldType());
         sprintf(buffer, "%s.%s = %" PRIu32, FieldInfo->getFieldName().c_str(), typeName, data);
         m_OutputBuffer += buffer;
@@ -100,7 +100,7 @@ void StatisticOutputConsole::outputField(fieldHandle_t fieldHandle, int64_t data
     char buffer[256];
     StatisticFieldInfo* FieldInfo = getRegisteredField(fieldHandle);
 
-    if (NULL != FieldInfo) {
+    if (nullptr != FieldInfo) {
         const char* typeName = getFieldTypeShortName(FieldInfo->getFieldType());
         sprintf(buffer, "%s.%s = %" PRId64, FieldInfo->getFieldName().c_str(), typeName, data);
         m_OutputBuffer += buffer;
@@ -113,7 +113,7 @@ void StatisticOutputConsole::outputField(fieldHandle_t fieldHandle, uint64_t dat
     char buffer[256];
     StatisticFieldInfo* FieldInfo = getRegisteredField(fieldHandle);
 
-    if (NULL != FieldInfo) {
+    if (nullptr != FieldInfo) {
         const char* typeName = getFieldTypeShortName(FieldInfo->getFieldType());
         sprintf(buffer, "%s.%s = %" PRIu64, FieldInfo->getFieldName().c_str(), typeName, data);
         m_OutputBuffer += buffer;
@@ -126,7 +126,7 @@ void StatisticOutputConsole::outputField(fieldHandle_t fieldHandle, float data)
     char buffer[256];
     StatisticFieldInfo* FieldInfo = getRegisteredField(fieldHandle);
 
-    if (NULL != FieldInfo) {
+    if (nullptr != FieldInfo) {
         const char* typeName = getFieldTypeShortName(FieldInfo->getFieldType());
         sprintf(buffer, "%s.%s = %f", FieldInfo->getFieldName().c_str(), typeName, data);
         m_OutputBuffer += buffer;
@@ -139,7 +139,7 @@ void StatisticOutputConsole::outputField(fieldHandle_t fieldHandle, double data)
     char buffer[256];
     StatisticFieldInfo* FieldInfo = getRegisteredField(fieldHandle);
 
-    if (NULL != FieldInfo) {
+    if (nullptr != FieldInfo) {
         const char* typeName = getFieldTypeShortName(FieldInfo->getFieldType());
         sprintf(buffer, "%s.%s = %f", FieldInfo->getFieldName().c_str(), typeName, data);
         m_OutputBuffer += buffer;

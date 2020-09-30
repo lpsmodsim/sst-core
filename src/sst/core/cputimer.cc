@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -10,12 +10,12 @@
 // distribution.
 
 
-#include <sst_config.h>
+#include "sst_config.h"
 #include "cputimer.h"
 
 double sst_get_cpu_time() {
-	struct timeval the_time;
-	gettimeofday(&the_time, 0);
+    struct timeval the_time;
+    gettimeofday(&the_time, nullptr);
 
-	return ((double) the_time.tv_sec) + (((double) the_time.tv_usec) * 1.0e-6);
+    return ((double) the_time.tv_sec) + (((double) the_time.tv_usec) * 1.0e-6);
 }

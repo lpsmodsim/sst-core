@@ -1,12 +1,12 @@
 // -*- c++ -*-
 
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -14,17 +14,17 @@
 #ifndef SST_CORE_UNITALGEBRA_H
 #define SST_CORE_UNITALGEBRA_H
 
-#include <sst/core/sst_types.h>
-#include <sst/core/serialization/serializable.h>
-#include <sst/core/serialization/serializer.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/serialization/serializable.h"
+#include "sst/core/serialization/serializer.h"
 
 #include <string>
 #include <map>
 #include <vector>
 #include <mutex>
 
-#include <sst/core/warnmacros.h>
-#include <sst/core/decimal_fixedpoint.h>
+#include "sst/core/warnmacros.h"
+#include "sst/core/decimal_fixedpoint.h"
 
 
 namespace SST {
@@ -43,7 +43,7 @@ class Units {
 
 private:
     friend class UnitAlgebra;
-    
+
     // Static data members and functions
     static std::recursive_mutex unit_lock;
     static std::map<std::string,unit_id_t> valid_base_units;
@@ -60,23 +60,26 @@ private:
 
     void reduce();
     // Used in constructor to incrementally build up unit from string
-    void addUnit(std::string, sst_big_num& multiplier, bool invert);
+    void addUnit(const std::string&, sst_big_num& multiplier, bool invert);
 
 public:
     // Static data members and functions
     /** Create a new Base Unit type */
-    static void registerBaseUnit(std::string u);
+    static void registerBaseUnit(const std::string& u);
     /** Create a new Compound Unit type */
-    static void registerCompoundUnit(std::string u, std::string v);
+    static void registerCompoundUnit(const std::string& u, const std::string& v);
 
     // Non-static data members and functions
     /** Create a new instantiation of a Units with a base unit string, and multiplier
      * \param units String representing the new unit
      * \param multiplier Value by which to multiply to get to this unit
      */
-    Units(std::string units, sst_big_num& multiplier);
+    Units(const std::string& units, sst_big_num& multiplier);
     Units() {}
     virtual ~Units() {}
+
+    /** Copy constructor */
+    Units(const Units&) = default;
 
     /** Assignment operator */
     Units& operator= (const Units& v);
@@ -107,10 +110,11 @@ private:
     Units unit;
     sst_big_num value;
 
-    static std::string trim(std::string str);
-    void init(std::string val);
+    static std::string trim(const std::string& str);
 
 public:
+    void init(const std::string& val);
+
     UnitAlgebra() {}
     /**
      Create a new UnitAlgebra instance, and pre-populate with a parsed value.
@@ -127,8 +131,11 @@ public:
      COMPUNIT   := {Hz,hz,Bps,bps,event}
      \endcode
      */
-    UnitAlgebra(std::string val);
+    UnitAlgebra(const std::string& val);
     virtual ~UnitAlgebra();
+
+    /** Copy constructor */
+    UnitAlgebra(const UnitAlgebra&) = default;
 
     /** Print to an ostream the value */
     void print(std::ostream& stream);
@@ -144,7 +151,7 @@ public:
     std::string toStringBestSI() const;
 
     UnitAlgebra& operator= (const std::string& v);
-    
+
     /** Multiply by an argument; */
     UnitAlgebra& operator*= (const UnitAlgebra& v);
     /** Multiply by an argument; */
@@ -189,18 +196,24 @@ public:
     bool operator< (const UnitAlgebra& v) const;
     /** Compare if this object is less than, or equal to, the argument */
     bool operator<= (const UnitAlgebra& v) const;
+    /** Compare if this object is equal to, the argument */
+    bool operator== (const UnitAlgebra& v) const;
+    /** Compare if this object is not equal to, the argument */
+    bool operator!= (const UnitAlgebra& v) const;
     /** Apply a reciprocal operation to the object */
     UnitAlgebra& invert();
 
     /** Returns true if the units in the parameter string are found
      * in this object.
      */
-    bool hasUnits(std::string u) const;
+    bool hasUnits(const std::string& u) const;
     /** Return the raw value */
     sst_big_num getValue() const {return value;}
     /** Return the rounded value as a 64bit integer */
     int64_t getRoundedValue() const;
-
+    double getDoubleValue() const;
+    bool isValueZero() const;
+    
     void serialize_order(SST::Core::Serialization::serializer &ser) override {
         // Do the unit
         ser & unit.numerator;

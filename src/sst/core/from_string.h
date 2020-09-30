@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -25,21 +25,21 @@ typename std::enable_if<std::is_integral<T>::value, T >::type
 {
     if ( std::is_signed<T>::value ) {
         if ( std::is_same<int,T>::value ) {
-            return std::stoi(input,0,0);
+            return std::stoi(input,nullptr,0);
         }
         else if ( std::is_same<long,T>::value ) {
-            return std::stol(input,0,0);
+            return std::stol(input,nullptr,0);
         }
         else if ( std::is_same<long long, T>::value ) {
-            return std::stoll(input,0,0);
+            return std::stoll(input,nullptr,0);
         }
         else {  // Smaller than 32-bit
-            return static_cast<T>(std::stol(input,0,0));
+            return static_cast<T>(std::stol(input,nullptr,0));
         }
     }
     else {
         if ( std::is_same<bool, T>::value ) {
-            // valid pairs: true/false, t/f, yes/no, y/n, on/off, 1/0 
+            // valid pairs: true/false, t/f, yes/no, y/n, on/off, 1/0
             std::string transform(input);
             for (auto & c: transform) c = std::tolower(c);
             if ( transform == "true" || transform == "t" || transform == "yes" || transform == "y" || transform == "on" || transform == "1" ) {
@@ -52,13 +52,13 @@ typename std::enable_if<std::is_integral<T>::value, T >::type
             }
         }
         else if ( std::is_same<unsigned long, T>::value ) {
-            return std::stoul(input,0,0);
+            return std::stoul(input,nullptr,0);
         }
         else if ( std::is_same<unsigned long long, T>::value ) {
-            return std::stoull(input,0,0);
+            return std::stoull(input,nullptr,0);
         }
         else {  // Smaller than 32-bit
-            return static_cast<T>(std::stoul(input,0,0));
+            return static_cast<T>(std::stoul(input,nullptr,0));
         }
     }
 }
@@ -66,7 +66,7 @@ typename std::enable_if<std::is_integral<T>::value, T >::type
 template<class T>
 typename std::enable_if<std::is_floating_point<T>::value, T >::type
   from_string(const std::string& input)
-{  
+{
     if ( std::is_same<float, T>::value ) {
         return stof(input);
     }
@@ -76,8 +76,8 @@ typename std::enable_if<std::is_floating_point<T>::value, T >::type
     else if ( std::is_same<long double, T>::value ) {
         return stold(input);
     } else { //make compiler happy
-			return stod(input);
-		}
+        return stod(input);
+        }
 }
 
 template<class T>

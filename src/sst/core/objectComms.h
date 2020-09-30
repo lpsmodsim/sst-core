@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -13,14 +13,14 @@
 #ifndef SST_CORE_OBJECTCOMMS_H
 #define SST_CORE_OBJECTCOMMS_H
 
-#include <sst/core/warnmacros.h>
+#include "sst/core/warnmacros.h"
 #ifdef SST_CONFIG_HAVE_MPI
 DISABLE_WARN_MISSING_OVERRIDE
 #include <mpi.h>
 REENABLE_WARNING
 #endif
 
-#include <sst/core/serialization/serializer.h>
+#include "sst/core/serialization/serializer.h"
 
 #include <typeinfo>
 
@@ -36,16 +36,16 @@ std::vector<char> serialize(dataType &data)
 
     ser.start_sizing();
     ser & data;
-    
+
     int size = ser.size();
-    
+
     std::vector<char> buffer;
     buffer.resize(size);
 
     ser.start_packing(buffer.data(),size);
     ser & data;
 
-    return buffer;    
+    return buffer;
 }
 
 // template <typename dataType>
@@ -59,36 +59,36 @@ std::vector<char> serialize(dataType &data)
 
 //     ser.start_sizing();
 //     ser & data;
-    
+
 //     int size = ser.size();
 //     std::cout << "serialize size = " << size << std::endl;
-    
+
 //     std::vector<char> buffer;
 //     buffer.resize(size);
 
 //     ser.start_packing(buffer.data(),size);
 //     ser & data;
 
-//     return buffer;    
+//     return buffer;
 // }
 
 
 template <typename dataType>
 dataType* deserialize(std::vector<char> &buffer)
 {
-    dataType *tgt = NULL;
+    dataType *tgt = nullptr;
 
     SST::Core::Serialization::serializer ser;
 
     ser.start_unpacking(buffer.data(), buffer.size());
     ser & tgt;
-    
+
     return tgt;
 }
 
 template <typename dataType>
 void deserialize(std::vector<char> &buffer, dataType &tgt)
-{ 
+{
     SST::Core::Serialization::serializer ser;
 
     ser.start_unpacking(buffer.data(), buffer.size());

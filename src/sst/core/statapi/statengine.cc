@@ -1,28 +1,28 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#include <sst_config.h>
+#include "sst_config.h"
+#include "sst/core/statapi/statengine.h"
 
-#include <sst/core/warnmacros.h>
-#include <sst/core/output.h>
-#include <sst/core/factory.h>
-#include <sst/core/timeLord.h>
-#include <sst/core/timeConverter.h>
-#include <sst/core/simulation.h>
-#include <sst/core/statapi/statbase.h>
-#include <sst/core/statapi/statengine.h>
-#include <sst/core/statapi/statoutput.h>
-#include <sst/core/configGraph.h>
-#include <sst/core/baseComponent.h>
-#include <sst/core/eli/elementinfo.h>
+#include "sst/core/warnmacros.h"
+#include "sst/core/output.h"
+#include "sst/core/factory.h"
+#include "sst/core/timeLord.h"
+#include "sst/core/timeConverter.h"
+#include "sst/core/simulation.h"
+#include "sst/core/statapi/statbase.h"
+#include "sst/core/statapi/statoutput.h"
+#include "sst/core/configGraph.h"
+#include "sst/core/baseComponent.h"
+#include "sst/core/eli/elementinfo.h"
 
 #include <algorithm>
 #include <string>
@@ -75,7 +75,7 @@ StatisticProcessingEngine::~StatisticProcessingEngine()
 
     // Destroy all the Statistics that have been created
     for (CompStatMap_t::iterator it_m = m_CompStatMap.begin(); it_m != m_CompStatMap.end(); it_m++) {
-        // Get the Array for this Map Item    
+        // Get the Array for this Map Item
         statArray = it_m->second;
 
         // Walk the stat Array and delete each stat
@@ -86,13 +86,14 @@ StatisticProcessingEngine::~StatisticProcessingEngine()
     }
 }
 
-bool StatisticProcessingEngine::registerStatisticCore(StatisticBase* stat)
+bool StatisticProcessingEngine::registerStatisticCore(StatisticBase* stat, uint8_t comp_load_level)
 {
     if ( stat->isNullStatistic() )
         return true;
 
+    uint8_t stat_load_level = comp_load_level == STATISTICLOADLEVELUNINITIALIZED ? m_statLoadLevel : comp_load_level;
 
-    if ( 0 == m_statLoadLevel ) {
+    if ( 0 == stat_load_level ) {
         m_output.verbose(CALL_INFO, 1, 0,
                 " Warning: Statistic Load Level = 0 (all statistics disabled); statistic %s is disabled...\n",
                 stat->getFullStatName().c_str());
@@ -101,10 +102,10 @@ bool StatisticProcessingEngine::registerStatisticCore(StatisticBase* stat)
 
 
     uint8_t enableLevel = stat->getComponent()->getComponentInfoStatisticEnableLevel(stat->getStatName());
-    if ( enableLevel > m_statLoadLevel ) {
+    if ( enableLevel > stat_load_level ) {
         m_output.verbose(CALL_INFO, 1, 0,
                 " Warning: Load Level %d is too low to enable Statistic %s with Enable Level %d, statistic will not be enabled...\n",
-                m_statLoadLevel, stat->getFullStatName().c_str(), enableLevel);
+                stat_load_level, stat->getFullStatName().c_str(), enableLevel);
         return false;
     }
 
@@ -114,25 +115,50 @@ bool StatisticProcessingEngine::registerStatisticCore(StatisticBase* stat)
         // If the mode is Periodic Based, the add the statistic to the
         // StatisticProcessingEngine otherwise add it as an Event Based Stat.
         UnitAlgebra collectionRate = stat->m_statParams.find<SST::UnitAlgebra>("rate", "0ns");
-        if (StatisticBase::STAT_MODE_PERIODIC == stat->getRegisteredCollectionMode()) {
-            if (false == addPeriodicBasedStatistic(collectionRate, stat)) {
-                return false;
-            }
-        } else {
-            if (false == addEventBasedStatistic(collectionRate, stat)) {
-                return false;
-            }
+        bool success = true;
+        switch (stat->getRegisteredCollectionMode()){
+        case StatisticBase::STAT_MODE_PERIODIC:
+          success = addPeriodicBasedStatistic(collectionRate, stat);
+          break;
+        case StatisticBase::STAT_MODE_COUNT:
+          success = addEventBasedStatistic(collectionRate, stat);
+          break;
+        case StatisticBase::STAT_MODE_DUMP_AT_END:
+          success = addEndOfSimStatistic(stat);
+          break;
+        case StatisticBase::STAT_MODE_UNDEFINED:
+          m_output.fatal(CALL_INFO, 1, "Stat mode is undefined for %s in registerStatistic",
+                         stat->getFullStatName().c_str());
+          break;
         }
+        if (!success) return false;
     } else {
-        /* Make sure it is periodic! */
-        if ( StatisticBase::STAT_MODE_PERIODIC != stat->getRegisteredCollectionMode() ) {
-            m_output.output("ERROR: Statistics in groups must be periodic in nature!\n");
-            return false;
+        switch (stat->getRegisteredCollectionMode()){
+        case StatisticBase::STAT_MODE_PERIODIC:
+        case StatisticBase::STAT_MODE_DUMP_AT_END:
+          break;
+        default:
+          m_output.output("ERROR: Statistics in groups must be periodic or dump at end\n");
+          return false;
         }
     }
 
-    /* All checks pass.  Add the stat */
+    // Make sure that the wireup has not been completed
+    if (true == stat->getComponent()->getSimulation()->isWireUpFinished()) {
+      if (!group.output->supportsDynamicRegistration()){
+        m_output.fatal(CALL_INFO, 1, "ERROR: Statistic %s - "
+             "Cannot be registered for output %s after the Components have been wired up. "
+             "Statistics on output %s must be registered on Component creation. exiting...\n",
+             stat->getFullStatName().c_str(), group.output->getStatisticOutputName().c_str(),
+             group.output->getStatisticOutputName().c_str());
+      } else if (stat->getRegisteredCollectionMode() != StatisticBase::STAT_MODE_DUMP_AT_END) {
+        m_output.fatal(CALL_INFO, 1, "ERROR: Statistic %s - "
+             "Stats can only be registered dynamically in DUMP_AT_END mode with no periodic clock",
+             stat->getFullStatName().c_str());
+      }
+    }
 
+    /* All checks pass.  Add the stat */
     group.addStatistic(stat);
 
     if ( group.isDefault ) {
@@ -183,6 +209,10 @@ void StatisticProcessingEngine::startOfSimulation()
 
 void StatisticProcessingEngine::endOfSimulation()
 {
+    //This is a redundant call to all this code
+    //Looping all the statistic groups and outputting them
+    //will cause all of this code to be executed anyway
+    //so really we are double dumping the end-of-time stats
 
     // Output the Event based Statistics
     for ( StatisticBase * stat : m_EventStatisticArray ) {
@@ -225,7 +255,7 @@ StatisticOutput* StatisticProcessingEngine::createStatisticOutput(const ConfigSt
     auto lcType = cfg.type;
     std::transform(lcType.begin(), lcType.end(), lcType.begin(), ::tolower);
     StatisticOutput *so = Factory::getFactory()->Create<StatisticOutput>(lcType, unsafeParams, unsafeParams);
-    if (NULL == so) {
+    if (nullptr == so) {
         m_output.fatal(CALL_INFO, 1, " - Unable to instantiate Statistic Output %s\n", cfg.type.c_str());
     }
 
@@ -268,7 +298,11 @@ StatisticGroup& StatisticProcessingEngine::getGroupForStatistic(const StatisticB
     return const_cast<StatisticGroup&>(m_defaultGroup);
 }
 
-
+bool
+StatisticProcessingEngine::addEndOfSimStatistic(StatisticBase* /*stat*/)
+{
+  return true;
+}
 
 bool StatisticProcessingEngine::addPeriodicBasedStatistic(const UnitAlgebra& freq, StatisticBase* stat)
 {
@@ -309,15 +343,15 @@ bool StatisticProcessingEngine::addPeriodicBasedStatistic(const UnitAlgebra& fre
 
 bool StatisticProcessingEngine::addEventBasedStatistic(const UnitAlgebra& count, StatisticBase* stat)
 {
-    if (0 != count.getValue()) {         
+    if (0 != count.getValue()) {
         // Set the Count Limit
         stat->setCollectionCountLimit(count.getRoundedValue());
     } else {
-        stat->setCollectionCountLimit(0); 
+        stat->setCollectionCountLimit(0);
     }
     stat->setFlagResetCountOnOutput(true);
 
-    // Add the statistic to the Array of Event Based Statistics    
+    // Add the statistic to the Array of Event Based Statistics
     m_EventStatisticArray.push_back(stat);
     return true;
 }
@@ -428,7 +462,7 @@ void StatisticProcessingEngine::performStatisticOutputImpl(StatisticBase* stat, 
             return;
         }
 
-        statOutput->outputEntries(stat, endOfSimFlag);
+        statOutput->output(stat, endOfSimFlag);
 
         if (false == endOfSimFlag) {
             // Check to see if the Statistic Count needs to be reset
@@ -472,7 +506,7 @@ void StatisticProcessingEngine::performStatisticGroupOutputImpl(StatisticGroup &
 }
 
 
-void StatisticProcessingEngine::performGlobalStatisticOutput(bool endOfSimFlag /*=false*/) 
+void StatisticProcessingEngine::performGlobalStatisticOutput(bool endOfSimFlag /*=false*/)
 {
     StatArray_t*    statArray;
     StatisticBase*  stat;
@@ -483,7 +517,7 @@ void StatisticProcessingEngine::performGlobalStatisticOutput(bool endOfSimFlag /
         performStatisticOutputImpl(stat, endOfSimFlag);
     }
 
-    // Output Periodic based statistics 
+    // Output Periodic based statistics
     for (StatMap_t::iterator it_m = m_PeriodicStatisticMap.begin(); it_m != m_PeriodicStatisticMap.end(); it_m++) {
         statArray = it_m->second;
 
@@ -501,7 +535,7 @@ void StatisticProcessingEngine::performGlobalStatisticOutput(bool endOfSimFlag /
 
 
 
-bool StatisticProcessingEngine::handleStatisticEngineClockEvent(Cycle_t UNUSED(CycleNum), SimTime_t timeFactor) 
+bool StatisticProcessingEngine::handleStatisticEngineClockEvent(Cycle_t UNUSED(CycleNum), SimTime_t timeFactor)
 {
     StatArray_t*     statArray;
     StatisticBase*   stat;
@@ -509,7 +543,7 @@ bool StatisticProcessingEngine::handleStatisticEngineClockEvent(Cycle_t UNUSED(C
 
     // Get the array for the timeFactor
     statArray = m_PeriodicStatisticMap[timeFactor];
-    
+
     // Walk the array, and call the output method of each statistic
     for (x = 0; x < statArray->size(); x++) {
         stat = statArray->at(x);
@@ -541,17 +575,17 @@ void StatisticProcessingEngine::handleStatisticEngineStartTimeEvent(SimTime_t ti
 
     // Get the array for the timeFactor
     statArray = m_StartTimeMap[timeFactor];
-    
+
     // Walk the array, and call the output method of each statistic
     for (x = 0; x < statArray->size(); x++) {
         stat = statArray->at(x);
 
-        // Enable the Statistic 
+        // Enable the Statistic
         stat->enable();
     }
 }
 
-void StatisticProcessingEngine::handleStatisticEngineStopTimeEvent(SimTime_t timeFactor) 
+void StatisticProcessingEngine::handleStatisticEngineStopTimeEvent(SimTime_t timeFactor)
 {
     StatArray_t*     statArray;
     StatisticBase*   stat;
@@ -559,12 +593,12 @@ void StatisticProcessingEngine::handleStatisticEngineStopTimeEvent(SimTime_t tim
 
     // Get the array for the timeFactor
     statArray = m_StopTimeMap[timeFactor];
-    
+
     // Walk the array, and call the output method of each statistic
     for (x = 0; x < statArray->size(); x++) {
         stat = statArray->at(x);
 
-        // Disable the Statistic 
+        // Disable the Statistic
         stat->disable();
     }
 }
@@ -576,30 +610,30 @@ StatisticProcessingEngine::isStatisticInCompStatMap(const std::string& compName,
 {
     StatArray_t*        statArray;
     StatisticBase*      TestStat;
-    
+
     // See if the map contains an entry for this Component ID
     if (m_CompStatMap.find(compId) == m_CompStatMap.end() ) {
         // Nope, this component ID has not been registered
-        return NULL;
+        return nullptr;
     }
-    
-    // The CompStatMap has Component ID registered, get the array associated with it    
+
+    // The CompStatMap has Component ID registered, get the array associated with it
     statArray = m_CompStatMap[compId];
-    
-    // Look for the Statistic in this array 
+
+    // Look for the Statistic in this array
     for (StatArray_t::iterator it_v = statArray->begin(); it_v != statArray->end(); it_v++) {
         TestStat = *it_v;
 
-        if ((TestStat->getCompName() == compName) && 
+        if ((TestStat->getCompName() == compName) &&
             (TestStat->getStatName() == statName) &&
             (TestStat->getStatSubId() == statSubId) &&
             (TestStat->getStatDataType() == fieldType)) {
             return TestStat;
         }
     }
-    
+
     // We did not find the stat in this component
-    return NULL;
+    return nullptr;
 }
 
 void StatisticProcessingEngine::addStatisticToCompStatMap(StatisticBase* Stat,
@@ -611,21 +645,21 @@ void StatisticProcessingEngine::addStatisticToCompStatMap(StatisticBase* Stat,
     // See if the map contains an entry for this Component ID
     if (m_CompStatMap.find(compId) == m_CompStatMap.end() ) {
         // Nope, Create a new Array of Statistics and relate it to the map
-        statArray = new std::vector<StatisticBase*>(); 
-        m_CompStatMap[compId] = statArray; 
+        statArray = new std::vector<StatisticBase*>();
+        m_CompStatMap[compId] = statArray;
     }
 
-    // The CompStatMap has Component ID registered, get the array associated with it    
+    // The CompStatMap has Component ID registered, get the array associated with it
     statArray = m_CompStatMap[compId];
 
-    // Add the statistic to the lists of statistics registered to this component   
+    // Add the statistic to the lists of statistics registered to this component
     statArray->push_back(Stat);
 }
 
 
 
 
-StatisticProcessingEngine* StatisticProcessingEngine::instance = NULL;
+StatisticProcessingEngine* StatisticProcessingEngine::instance = nullptr;
 
 } //namespace Statistics
 } //namespace SST

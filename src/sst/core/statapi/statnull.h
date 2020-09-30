@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -13,29 +13,29 @@
 #ifndef _H_SST_CORE_NULL_STATISTIC_
 #define _H_SST_CORE_NULL_STATISTIC_
 
-#include <sst/core/sst_types.h>
-#include <sst/core/warnmacros.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/warnmacros.h"
 
-#include <sst/core/statapi/statbase.h>
+#include "sst/core/statapi/statbase.h"
 
 namespace SST {
 namespace Statistics {
 
-// NOTE: When calling base class members of classes derived from 
-//       a templated base class.  The user must use "this->" in 
-//       order to call base class members (to avoid a compiler 
-//       error) because they are "nondependant named" and the 
-//       templated base class is a "dependant named".  The 
-//       compiler will not look in dependant named base classes 
+// NOTE: When calling base class members of classes derived from
+//       a templated base class.  The user must use "this->" in
+//       order to call base class members (to avoid a compiler
+//       error) because they are "nondependant named" and the
+//       templated base class is a "dependant named".  The
+//       compiler will not look in dependant named base classes
 //       when looking up indepenedent names.
 // See: http://www.parashift.com/c++-faq-lite/nondependent-name-lookup-members.html
 
 /**
-	\class NullStatistic
+    \class NullStatistic
 
-	An empty statistic place holder.
+    An empty statistic place holder.
 
-	@tparam T A template for holding the main data type of this statistic
+    @tparam T A template for holding the main data type of this statistic
 */
 template <class T, bool B = std::is_fundamental<T>::value>
 struct NullStatisticBase {};
@@ -52,6 +52,8 @@ struct NullStatisticBase<T,true> : public Statistic<T> {
   }
 
   void addData_impl(T UNUSED(data)) override {}
+
+  void addData_impl_Ntimes(uint64_t UNUSED(N), T UNUSED(data)) override {}
 };
 
 template <class... Args>
@@ -66,6 +68,8 @@ struct NullStatisticBase<std::tuple<Args...>,false> : public Statistic<std::tupl
   }
 
   void addData_impl(Args... UNUSED(data)) override {}
+
+  void addData_impl_Ntimes(uint64_t UNUSED(N), Args... UNUSED(data)) override {}
 };
 
 template <class T>
@@ -81,6 +85,9 @@ struct NullStatisticBase<T,false> : public Statistic<T> {
 
   void addData_impl(T&& UNUSED(data)) override {}
   void addData_impl(const T& UNUSED(data)) override {}
+
+  void addData_impl(uint64_t UNUSED(N), T&& UNUSED(data)) override {}
+  void addData_impl(uint64_t UNUSED(N), const T& UNUSED(data)) override {}
 };
 
 template <class T>
@@ -106,12 +113,12 @@ struct NullStatistic : public NullStatisticBase<T> {
       // Do Nothing
   }
 
-  void registerOutputFields(StatisticOutput* UNUSED(statOutput)) override
+  void registerOutputFields(StatisticFieldsOutput* UNUSED(statOutput)) override
   {
       // Do Nothing
   }
 
-  void outputStatisticData(StatisticOutput* UNUSED(statOutput), bool UNUSED(EndOfSimFlag)) override
+  void outputStatisticFields(StatisticFieldsOutput* UNUSED(statOutput), bool UNUSED(EndOfSimFlag)) override
   {
       // Do Nothing
   }
@@ -134,6 +141,30 @@ struct NullStatistic : public NullStatisticBase<T> {
 };
 
 template <class T> bool NullStatistic<T>::loaded_ = true;
+
+template <>
+struct NullStatistic<void> : public Statistic<void>
+{
+  SST_ELI_REGISTER_DERIVED(
+    Statistic<void>,
+    NullStatistic<void>,
+    "sst",
+    "NullStatistic",
+    SST_ELI_ELEMENT_VERSION(1,0,0),
+    "Null statistic for custom (void) stats"
+  )
+
+  SST_ELI_INTERFACE_INFO("Statistic<void>")
+
+  NullStatistic(BaseComponent* comp, const std::string& statName,
+                    const std::string& statSubId, Params& statParams)
+  : Statistic<void>(comp, statName, statSubId, statParams)
+  {
+      // Set the Name of this Statistic
+      this->setStatisticTypeName("NULL");
+  }
+};
+
 
 } //namespace Statistics
 } //namespace SST

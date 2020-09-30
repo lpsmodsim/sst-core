@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -12,8 +12,8 @@
 #ifndef SST_CORE_PARAM_H
 #define SST_CORE_PARAM_H
 
-#include <sst/core/output.h>
-#include <sst/core/from_string.h>
+#include "sst/core/output.h"
+#include "sst/core/from_string.h"
 
 #include <cassert>
 #include <inttypes.h>
@@ -23,11 +23,10 @@
 #include <stack>
 #include <stdlib.h>
 #include <utility>
-#include <sst/core/threadsafe.h>
+#include "sst/core/threadsafe.h"
 
-#include <sst/core/serialization/serializable.h>
-#include <sst/core/serialization/serializer.h>
-#include <sst/core/output.h>
+#include "sst/core/serialization/serializable.h"
+#include "sst/core/serialization/serializer.h"
 
 int main(int argc, char *argv[]);
 
@@ -88,7 +87,34 @@ NO_VARIABLE:
     };
 
 
-    /** Find a Parameter value in the set, and return its value as a type T.
+    /** Private utility function to convert a value to the specified
+     * type and check for errors.  Key is passed only in case an error
+     * message needs to be generated.
+     *
+     * Type T must be either a basic numeric type (including bool) ,
+     * a std::string, or a class that has a constructor with a std::string
+     * as its only parameter.  This class uses SST::Core::from_string to
+     * do the conversion.
+     * @param k - Parameter name
+     * @throw std::invalid_argument If value in (key, value) can't be
+     * converted to type T, an invalid_argument exception is thrown.
+     */
+    template <class T>
+    inline T convert_value(const std::string& key, const std::string& val) const {
+        try {
+            return SST::Core::from_string<T>(val);
+        }
+        catch ( const std::invalid_argument& e ) {
+            std::string msg = "Params::find(): No conversion for value: key = " + key + ", value =  " + val +
+                ".  Original error: " + e.what();
+            std::invalid_argument t(msg);
+            throw t;
+        }
+    }
+
+    /** Private utility function to find a Parameter value in the set,
+     * and return its value as a type T.
+     *
      * Type T must be either a basic numeric type (including bool) ,
      * a std::string, or a class that has a constructor with a std::string
      * as its only parameter.  This class uses SST::Core::from_string to
@@ -100,28 +126,16 @@ NO_VARIABLE:
      * converted to type T, an invalid_argument exception is thrown.
      */
     template <class T>
-    inline T find_impl(const std::string &k, T default_value, bool &found) const {
+    inline T find_impl(const std::string& k, T default_value, bool &found) const {
         verifyParam(k);
         // const_iterator i = data.find(getKey(k));
         const std::string& value = getString(k,found);
-        // if (i == data.end()) {
-            // found = false;
         if ( !found ) {
             return default_value;
         }
         else {
-            // found = true;
-            try {
-                // return SST::Core::from_string<T>(i->second);
-                return SST::Core::from_string<T>(value);
-            }
-            catch ( const std::invalid_argument& e ) {
-                std::string msg = "Params::find(): No conversion for value: key = " + k + ", value =  " + value +
-                    ".  Original error: " + e.what();
-                std::invalid_argument t(msg);
-                throw t;
-            }
-        }        
+            return convert_value<T>(k,value);
+        }
     }
 
     /** Find a Parameter value in the set, and return its value as a type T.
@@ -135,7 +149,7 @@ NO_VARIABLE:
      * @param found - set to true if the the parameter was found
      */
     template <class T>
-    inline T find_impl(const std::string &k, std::string default_value, bool &found) const {
+    inline T find_impl(const std::string& k, const std::string& default_value, bool &found) const {
         verifyParam(k);
         const std::string& value = getString(k,found);
         if ( !found ) {
@@ -160,13 +174,15 @@ NO_VARIABLE:
                 std::invalid_argument t(msg);
                 throw t;
             }
-        }        
+        }
     }
-    
+
     typedef std::map<uint32_t, std::string>::const_iterator const_iterator; /*!< Const Iterator type */
 
     const std::string& getString(const std::string& name, bool& found) const;
-    
+
+    void getArrayTokens(const std::string& value, std::vector<std::string>& tokens) const;
+
 public:
     typedef std::string key_type;  /*!< Type of key (string) */
     typedef std::set<key_type, KeyCompare> KeySet_t; /*!< Type of a set of keys */
@@ -235,10 +251,10 @@ public:
      */
     template <class T>
     typename std::enable_if<not std::is_same<std::string,T>::value, T>::type
-    find(const std::string &k, T default_value, bool &found) const {
+    find(const std::string& k, T default_value, bool &found) const {
         return find_impl<T>(k,default_value,found);
     }
-    
+
     /** Find a Parameter value in the set, and return its value as a type T.
      * Type T must be either a basic numeric type (including bool) ,
      * a std::string, or a class that has a constructor with a std::string
@@ -250,10 +266,10 @@ public:
      * @param found - set to true if the the parameter was found
      */
     template <class T>
-    T find(const std::string &k, std::string default_value, bool &found) const {
+    T find(const std::string& k, const std::string& default_value, bool &found) const {
         return find_impl<T>(k,default_value,found);
     }
-    
+
     /** Find a Parameter value in the set, and return its value as a type T.
      * This version of find is only enabled for bool.  This
      * is required because a string literal will be preferentially
@@ -266,8 +282,8 @@ public:
      */
     template <class T>
     typename std::enable_if<std::is_same<bool,T>::value, T>::type
-    find(const std::string &k, const char* default_value, bool &found ) const {
-        if ( 0 == default_value ) {
+    find(const std::string& k, const char* default_value, bool &found ) const {
+        if ( nullptr == default_value ) {
             return find_impl<T>(k, static_cast<T>(0), found);
         }
         return find_impl<T>(k, std::string(default_value), found);
@@ -282,11 +298,11 @@ public:
      * @param default_value - Default value to return if parameter isn't found
      */
     template <class T>
-    T find(const std::string &k, T default_value ) const {
+    T find(const std::string& k, T default_value ) const {
         bool tmp;
         return find_impl<T>(k, default_value, tmp);
     }
-    
+
     /** Find a Parameter value in the set, and return its value as a type T.
      * Type T must be either a basic numeric type (including bool) ,
      * a std::string, or a class that has a constructor with a std::string
@@ -297,11 +313,11 @@ public:
      *   specified as a string
      */
     template <class T>
-    T find(const std::string &k, std::string default_value ) const {
+    T find(const std::string& k, const std::string& default_value ) const {
         bool tmp;
         return find_impl<T>(k, default_value, tmp);
     }
-    
+
     /** Find a Parameter value in the set, and return its value as a type T.
      * This version of find is only enabled for bool.  This
      * is required because a string literal will be preferentially
@@ -314,14 +330,14 @@ public:
      */
     template <class T>
     typename std::enable_if<std::is_same<bool,T>::value, T>::type
-    find(const std::string &k, const char* default_value ) const {
+    find(const std::string& k, const char* default_value ) const {
         bool tmp;
-        if ( 0 == default_value ) {
+        if ( nullptr == default_value ) {
             return find_impl<T>(k, static_cast<T>(0), tmp);
         }
         return find_impl<T>(k, std::string(default_value), tmp);
     }
-    
+
     /** Find a Parameter value in the set, and return its value as a type T.
      * Type T must be either a basic numeric type (including bool) ,
      * a std::string, or a class that has a constructor with a std::string
@@ -330,7 +346,7 @@ public:
      * @param k - Parameter name
      */
     template <class T>
-    T find(const std::string &k) const {
+    T find(const std::string& k) const {
         bool tmp;
         T default_value = T();
         return find_impl<T>(k, default_value, tmp);
@@ -348,7 +364,7 @@ public:
      */
     template <class T>
     typename std::enable_if<not std::is_same<bool, T>::value, T>::type
-    find(const std::string &k, bool &found) const {
+    find(const std::string& k, bool &found) const {
         T default_value = T();
         return find_impl<T>(k, default_value, found);
     }
@@ -356,10 +372,60 @@ public:
     /** Find a Parameter value in the set, and return its value as a
      * vector of T's.  The array will be appended to
      * the end of the vector.
-     * Type T must be either a basic numeric type (including bool) ,
-     * a std::string, or a class that has a constructor with a std::string
-     * as its only parameter.  This class uses SST::Core::from_string to
-     * do the conversion.
+     *
+     * Type T must be either a basic numeric type (including bool) , a
+     * std::string, or a class that has a constructor with a
+     * std::string as its only parameter.  This class uses
+     * SST::Core::from_string to do the conversion.  The values in the
+     * array must be enclosed in square brackets ( [] ), and be comma
+     * separated (commas in double or single quotes will not be
+     * considered a delimiter).  If there are no square brackets, the
+     * entire string will be considered one value and a single item
+     * will be added to the vector.
+     *
+     * More details about parsing the values out of the string:
+     *
+     * Parses a string representing an array of tokens.  It is
+     * tailored to the types strings you get when passing a python
+     * list as the param string.  When you call addParam() on a python
+     * list in the input file, it will call the str() function on the
+     * list, which creates a string with the following format:
+     *     [item1, item2, item3]
+     *
+     * The format of the items depends on where they came from.  The
+     * string for the items are generated by calling the repr()
+     * function on them.  For strings, this means they will typically
+     * be enclosed in single quotes.  It is possible that they end up
+     * enclosed in double quotes if the string itself contains a
+     * single quote.  For strings which contain both single and double
+     * quotes, the repr() will create a single quoted string with all
+     * internal single quotes escaped with '\'.  Most other items used
+     * in SST do not enclose the string in quotes, though any string
+     * that contains a comma would need to be enclosed in quotes,
+     * since the comma is the delimiter character used.  This is not
+     * done automatically, so if you have something that generates a
+     * commma in the string created by repr(), you may need to create
+     * an array string manually.  Also, any string that starts with a
+     * quote character, must end with the same quote character.
+     *
+     * Tokens are generated by splitting the string on commas that are
+     * not within quotes (double or single).  All whitespace at the
+     * beginning and end of a token is ignored (unless inside quotes).
+     * Once the tokens are generated, any quoted string will have the
+     * front and back quotes removed.  The '\' for any escaped quote
+     * of the same type as the front and back is also removed.
+     *
+     * Examples:
+     *
+     * These will produce the same results:
+     * [1, 2, 3, 4, 5]
+     * ['1', '2', '3', '4', '5']
+     *
+     * Examples of strings using double and/or single quotes:
+     * 'This is "a" test'  ->  This is "a" test
+     * "This is 'a' test" -> This is 'a' test
+     * 'This "is \'a\'" test'  -> This "is 'a'" test
+     * 'This "is \"a\"" test'  -> This "is \"a\"" test
      *
      * @param k - Parameter name
      * @param vec - vector to append array items to
@@ -367,59 +433,65 @@ public:
     template <class T>
     void find_array(const key_type &k, std::vector<T>& vec) const {
         verifyParam(k);
-        // const_iterator i = data.find(getKey(k));
-        // if ( i == data.end()) {
-        //     return;
-        // }
-        // std::string value = i->second;
+
         bool found = false;
         std::string value = getString(k,found);
         if ( !found ) return;
-        // String should start with [ and end with ], we need to cut
-        // these out
-        // Test the value for correct [...] formatting
-        if( (value.find("[") == std::string::npos) ||
-            (value.find("]") == std::string::npos) ){
-          std::string msg =
-            "Params::find_array(): Invalid formatting: String must be enclosed by brackets [str]";
-          std::invalid_argument t(msg);
-          throw t;
+        // If string starts with [ and ends with ], it is considered
+        // an array.  Otherwise, it is considered a single
+        // value.
+        if ( value.front() != '[' || value.back() != ']' ) {
+            vec.push_back(convert_value<T>(k,value));
+            return;
         }
-        value = value.substr(0,value.size()-1);
-        value = value.substr(1);
 
-        std::stringstream ss(value);
+        value = value.substr(1,value.size()-2);
 
-        while( ss.good() ) {
-            std::string substr;
-            getline( ss, substr, ',' );
-            // vec.push_back(strtol(substr.c_str(), NULL, 0));
-            try {
-                vec.push_back(SST::Core::from_string<T>(substr));
-            }
-            catch ( const std::invalid_argument& e ) {
-                std::string msg = "Params::find(): No conversion for value: key = " + k + ", value =  " + substr +
-                    ".  Original error: " + e.what();
-                std::invalid_argument t(msg);
-                throw t;
-            }
+        // Get the tokens for the array
+        std::vector<std::string> tokens;
+        getArrayTokens(value,tokens);
+
+        // Convert each token into the proper type and put in output
+        // vector
+        for ( auto& val : tokens ) {
+            vec.push_back(convert_value<T>(k,val));
         }
     }
 
+    /** Checks to see if the value associated with the given key is
+     * considered to be an array.  A value is considered to be an
+     * array if it is enclosed in square brackets ([]).  No whitespace
+     * before or after the brackets is allowed.
+     *
+     * @param k - Parameter name
+     * @return true if value is an array as described above, false otherwise.
+     */
+    bool is_value_array(const key_type& k) const {
+        bool found = false;
+        std::string value = getString(k,found);
+        if ( !found ) return false;
+        // String should start with [ and end with ]
+        if( (value.find("[") == std::string::npos) ||
+            (value.find("]") == std::string::npos) ){
+            return false;
+        }
+        return true;
+    }
+
     /** Print all key/value parameter pairs to specified ostream */
-    void print_all_params(std::ostream &os, std::string prefix = "") const;
-    void print_all_params(Output &out, std::string prefix = "") const;
+    void print_all_params(std::ostream &os, const std::string& prefix = "") const;
+    void print_all_params(Output &out, const std::string& prefix = "") const;
 
 
 
     /** Add a key value pair into the param object.
      */
-    void insert(std::string key, std::string value, bool overwrite = true);
+    void insert(const std::string& key, const std::string& value, bool overwrite = true);
 
     void insert(const Params& params);
 
     std::set<std::string> getKeys() const;
-    
+
      /** Returns a new parameter object with parameters that match
      * the specified prefix.
      */
@@ -468,8 +540,8 @@ private:
     bool verify_enabled;
     static bool g_verify_enabled;
 
-    uint32_t getKey(const std::string &str) const;
-    uint32_t getKey(const std::string &str);
+    uint32_t getKey(const std::string& str) const;
+    uint32_t getKey(const std::string& str);
 
     /* Friend main() because it broadcasts the maps */
     friend int ::main(int argc, char *argv[]);
@@ -487,17 +559,17 @@ private:
 
  #define SST_PARAMS_DECLARE_TEMPLATE_SPECIALIZATION(type) \
      template<> \
-     type Params::find(const std::string &k, type default_value, bool &found) const; \
+     type Params::find(const std::string& k, type default_value, bool &found) const; \
      template<> \
-     type Params::find(const std::string &k, std::string default_value, bool &found) const; \
+     type Params::find(const std::string& k, const std::string& default_value, bool &found) const; \
      template <> \
-     type Params::find(const std::string &k, type default_value ) const; \
+     type Params::find(const std::string& k, type default_value ) const; \
      template <> \
-     type Params::find(const std::string &k, std::string default_value ) const; \
+     type Params::find(const std::string& k, const std::string& default_value ) const; \
      template <> \
-     type Params::find(const std::string &k) const;
-  
- 
+     type Params::find(const std::string& k) const;
+
+
  SST_PARAMS_DECLARE_TEMPLATE_SPECIALIZATION(int32_t)
  SST_PARAMS_DECLARE_TEMPLATE_SPECIALIZATION(uint32_t)
  SST_PARAMS_DECLARE_TEMPLATE_SPECIALIZATION(int64_t)
@@ -510,7 +582,7 @@ private:
  // std::string has to be special cased because of signature conflicts
  // SST_PARAMS_DECLARE_TEMPLATE_SPECIALIZATION(std::string)
  template<>
- std::string Params::find<std::string>(const std::string &k, std::string default_value, bool &found) const;
+ std::string Params::find<std::string>(const std::string& k, const std::string& default_value, bool &found) const;
 #endif
 
 

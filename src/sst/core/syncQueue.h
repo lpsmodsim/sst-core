@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -12,12 +12,10 @@
 #ifndef SST_CORE_SYNCQUEUE_H
 #define SST_CORE_SYNCQUEUE_H
 
-//#include <sst/core/serialization.h>
-
 #include <vector>
 
-#include <sst/core/activityQueue.h>
-#include <sst/core/threadsafe.h>
+#include "sst/core/activityQueue.h"
+#include "sst/core/threadsafe.h"
 
 namespace SST {
 
@@ -36,7 +34,7 @@ public:
         uint32_t count;
         uint32_t buffer_size;
     };
-    
+
     SyncQueue();
     ~SyncQueue();
 
@@ -55,7 +53,7 @@ public:
     uint64_t getDataSize() {
         return buf_size + (activities.capacity() * sizeof(Activity*));
     }
-    
+
 private:
     char* buffer;
     size_t buf_size;
@@ -64,7 +62,7 @@ private:
     Core::ThreadSafe::Spinlock slock;
 };
 
- 
+
 } //namespace SST
 
 #endif // SST_CORE_SYNCQUEUE_H

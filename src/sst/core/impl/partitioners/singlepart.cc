@@ -1,21 +1,21 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#include <sst_config.h>
+#include "sst_config.h"
 
-#include <sst/core/impl/partitioners/singlepart.h>
+#include "sst/core/impl/partitioners/singlepart.h"
 
-#include <sst/core/warnmacros.h>
+#include "sst/core/warnmacros.h"
 
-#include <sst/core/configGraph.h>
+#include "sst/core/configGraph.h"
 
 using namespace std;
 
@@ -25,10 +25,10 @@ SSTSinglePartition::SSTSinglePartition(RankInfo UNUSED(total_ranks), RankInfo UN
 
 void SSTSinglePartition::performPartition(PartitionGraph* graph) {
 
-	PartitionComponentMap_t& compMap = graph->getComponentMap();
+    PartitionComponentMap_t& compMap = graph->getComponentMap();
 
-	for(auto compItr = compMap.begin(); compItr != compMap.end(); compItr++) {
-		compItr->rank = RankInfo(0,0);
-	}
+    for(auto compItr = compMap.begin(); compItr != compMap.end(); compItr++) {
+        compItr->rank = RankInfo(0,0);
+    }
 
 }

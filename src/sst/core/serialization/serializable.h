@@ -1,7 +1,7 @@
 /*
  *  This file is part of SST/macroscale:
  *               The macroscale architecture simulator from the SST suite.
- *  Copyright (c) 2009-2019 NTESS.
+ *  Copyright (c) 2009-2020 NTESS.
  *  This software is distributed under the BSD License.
  *  Under the terms of Contract DE-NA0003525 with NTESS,
  *  the U.S. Government retains certain rights in this software.
@@ -12,8 +12,8 @@
 #ifndef SST_CORE_SERIALIZATION_SERIALIZABLE_H
 #define SST_CORE_SERIALIZATION_SERIALIZABLE_H
 
-#include <sst/core/serialization/serializer.h>
-#include <sst/core/warnmacros.h>
+#include "sst/core/serialization/serializer.h"
+#include "sst/core/warnmacros.h"
 #include <unordered_map>
 #include <typeinfo>
 #include <stdint.h>
@@ -30,19 +30,18 @@ namespace pvt {
 
 inline uint32_t type_hash(const char* key)
 {
-  int len = ::strlen(key);
-  uint32_t hash = 0;
-  for(int i = 0; i < len; ++i)
-  {
-    hash += key[i];
-    hash += (hash << 10);
-    hash ^= (hash >> 6);
-  }
-  hash += (hash << 3);
-  hash ^= (hash >> 11);
-  hash += (hash << 15);
+    int len = ::strlen(key);
+    uint32_t hash = 0;
+    for(int i = 0; i < len; ++i) {
+        hash += key[i];
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
 
-  return hash;
+    return hash;
 }
 
 // Using constexpr is very limited, so the implementation is a bit
@@ -110,20 +109,20 @@ constexpr uint32_t ct_hash(const char* str)
 class serializable
 {
 public:
-		static constexpr uint32_t NullClsId = std::numeric_limits<uint32_t>::max(); 
+    static constexpr uint32_t NullClsId = std::numeric_limits<uint32_t>::max();
 
     virtual const char*
     cls_name() const = 0;
 
     virtual void
     serialize_order(serializer& ser) = 0;
-    
+
     virtual uint32_t
     cls_id() const = 0;
     virtual std::string serialization_name() const = 0;
-    
+
     virtual ~serializable() { }
-    
+
 protected:
     typedef enum { ConstructorFlag } cxn_flag_t;
     static void serializable_abort(uint32_t line, const char* file, const char* func, const char* obj);
@@ -135,7 +134,7 @@ class serializable_type
 };
 
 #define ImplementVirtualSerializable(obj)     \
-   protected:                                \
+    protected:                                \
        obj(cxn_flag_t flag){}
 
 
@@ -202,85 +201,85 @@ private:\
 
 class serializable_builder
 {
- public:
-  virtual serializable*
-  build() const = 0;
+public:
+    virtual serializable*
+    build() const = 0;
 
-  virtual ~serializable_builder(){}
+    virtual ~serializable_builder(){}
 
-  virtual const char*
-  name() const = 0;
+    virtual const char*
+    name() const = 0;
 
-  virtual uint32_t
-  cls_id() const = 0;
+    virtual uint32_t
+    cls_id() const = 0;
 
-  virtual bool
-  sanity(serializable* ser) = 0;
+    virtual bool
+    sanity(serializable* ser) = 0;
 };
 
 template<class T>
 class serializable_builder_impl : public serializable_builder
 {
- protected:
+protected:
     static const char* name_;
     static const uint32_t cls_id_;
 
- public:
-  serializable*
-  build() const override {
-      return T::construct_deserialize_stub();
-  }
+public:
+    serializable*
+    build() const override {
+        return T::construct_deserialize_stub();
+    }
 
-  const char*
-  name() const override {
-    return name_;
-  }
+    const char*
+    name() const override {
+        return name_;
+    }
 
-  uint32_t
-  cls_id() const override {
-      return cls_id_;
-  }
+    uint32_t
+    cls_id() const override {
+        return cls_id_;
+    }
 
-  static uint32_t
-  static_cls_id() {
-    return cls_id_;
-  }
+    static uint32_t
+    static_cls_id() {
+        return cls_id_;
+    }
 
-  static const char*
-  static_name() {
-      return name_;
-  }
-    
-  bool
-  sanity(serializable* ser) override {
-    return (typeid(T) == typeid(*ser));
-  }
+    static const char*
+    static_name() {
+        return name_;
+    }
+
+    bool
+    sanity(serializable* ser) override {
+        return (typeid(T) == typeid(*ser));
+    }
 };
 
 class serializable_factory
 {
 protected:
-  typedef std::unordered_map<long, serializable_builder*> builder_map;
-  static builder_map* builders_;
+    typedef std::unordered_map<long, serializable_builder*> builder_map;
+    static builder_map* builders_;
 
- public:
-  static serializable*
-  get_serializable(uint32_t cls_id);
+public:
+    static serializable*
+    get_serializable(uint32_t cls_id);
 
-  /**
-      @return The cls id for the given builder
-  */
-  static uint32_t
-  // add_builder(serializable_builder* builder, uint32_t cls_id);
-  add_builder(serializable_builder* builder, const char* name);
+    /**
+       @return The cls id for the given builder
+    */
+    static uint32_t
+    // add_builder(serializable_builder* builder, uint32_t cls_id);
+    add_builder(serializable_builder* builder, const char* name);
 
-  static bool
-  sanity(serializable* ser, uint32_t cls_id) {
-    return (*builders_)[cls_id]->sanity(ser);
-  }
+    static bool
+    sanity(serializable* ser, uint32_t cls_id) {
+        return (*builders_)[cls_id]->sanity(ser);
+    }
 
-  static void
-  delete_statics();
+    static void
+    delete_statics();
 
 };
 
@@ -304,7 +303,7 @@ template<class T> const uint32_t serializable_builder_impl<T>::cls_id_
 #define DeclareSerializable(obj)
 
 
-#include <sst/core/serialization/serialize_serializable.h>
+#include "sst/core/serialization/serialize_serializable.h"
 
 #endif
 

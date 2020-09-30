@@ -1,45 +1,42 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
 
 #include "sst_config.h"
-#include <sst/core/simulation.h>
-#include <sst/core/warnmacros.h>
+#include "sst/core/simulation.h"
+#include "sst/core/warnmacros.h"
 
 #include <utility>
 
-//#include <sst/core/archive.h>
-#include <sst/core/clock.h>
-#include <sst/core/config.h>
-#include <sst/core/configGraph.h>
-#include <sst/core/heartbeat.h>
-//#include <sst/core/event.h>
-#include <sst/core/exit.h>
-#include <sst/core/factory.h>
-//#include <sst/core/graph.h>
-#include <sst/core/linkMap.h>
-#include <sst/core/linkPair.h>
-#include <sst/core/sharedRegionImpl.h>
-#include <sst/core/output.h>
-#include <sst/core/stopAction.h>
-#include <sst/core/stringize.h>
-#include <sst/core/syncBase.h>
-#include <sst/core/syncManager.h>
-#include <sst/core/syncQueue.h>
-#include <sst/core/threadSync.h>
-#include <sst/core/timeConverter.h>
-#include <sst/core/timeLord.h>
-#include <sst/core/timeVortex.h>
-#include <sst/core/unitAlgebra.h>
-#include <sst/core/statapi/statengine.h>
+#include "sst/core/clock.h"
+#include "sst/core/config.h"
+#include "sst/core/configGraph.h"
+#include "sst/core/heartbeat.h"
+#include "sst/core/exit.h"
+#include "sst/core/factory.h"
+#include "sst/core/linkMap.h"
+#include "sst/core/linkPair.h"
+#include "sst/core/sharedRegionImpl.h"
+#include "sst/core/output.h"
+#include "sst/core/stopAction.h"
+#include "sst/core/stringize.h"
+#include "sst/core/syncBase.h"
+#include "sst/core/syncManager.h"
+#include "sst/core/syncQueue.h"
+#include "sst/core/threadSync.h"
+#include "sst/core/timeConverter.h"
+#include "sst/core/timeLord.h"
+#include "sst/core/timeVortex.h"
+#include "sst/core/unitAlgebra.h"
+#include "sst/core/statapi/statengine.h"
 
 #define SST_SIMTIME_MAX  0xffffffffffffffff
 
@@ -64,20 +61,20 @@ Simulation::~Simulation()
 
     // Delete all the components
     // for ( CompMap_t::iterator it = compMap.begin(); it != compMap.end(); ++it ) {
-	// delete it->second;
+    // delete it->second;
     // }
     // compMap.clear();
-    
+
 
     // Clocks already got deleted by timeVortex, simply clear the clockMap
     clockMap.clear();
-    
+
     // OneShots already got deleted by timeVortex, simply clear the onsShotMap
     oneShotMap.clear();
 
     // Clear out Components
     compInfoMap.clear();
-    
+
     // // Delete any remaining links.  This should never happen now, but
     // // when we add an API to have components build subcomponents, user
     // // error could cause LinkMaps to be left.
@@ -87,7 +84,7 @@ Simulation::~Simulation()
     // }
     // component_links.clear();
 
-    // Delete the links    
+    // Delete the links
     // for ( CompInfoMap_t::iterator it = compInfoMap.begin(); it != compInfoMap.end(); ++it ) {
     //     std::map<std::string,Link*>& map = it->second.link_map->getLinkMap();
     //     std::map<std::string,Link*>::iterator map_it;
@@ -121,9 +118,9 @@ void Simulation::shutdown()
 
 Simulation::Simulation( Config* cfg, RankInfo my_rank, RankInfo num_ranks, SimTime_t min_part) :
     runMode(cfg->runMode),
-    timeVortex(NULL),
+    timeVortex(nullptr),
     interThreadMinLatency(MAX_SIMTIME_T),
-    threadSync(NULL),
+    threadSync(nullptr),
     currentSimCycle(0),
     endSimCycle(0),
     currentPriority(0),
@@ -147,7 +144,7 @@ Simulation::Simulation( Config* cfg, RankInfo my_rank, RankInfo num_ranks, SimTi
 
     if(strcmp(cfg->heartbeatPeriod.c_str(), "N") != 0 && my_rank.thread == 0) {
         sim_output.output("# Creating simulation heartbeat at period of %s.\n", cfg->heartbeatPeriod.c_str());
-    	m_heartbeat = new SimulatorHeartbeat(cfg, my_rank.rank, this, timeLord.getTimeConverter(cfg->heartbeatPeriod) );
+        m_heartbeat = new SimulatorHeartbeat(cfg, my_rank.rank, this, timeLord.getTimeConverter(cfg->heartbeatPeriod) );
     }
 
     // Need to create the thread sync if there is more than one thread
@@ -161,9 +158,9 @@ Simulation::setStopAtCycle( Config* cfg )
 {
     SimTime_t stopAt = timeLord.getSimCycles(cfg->stopAtCycle,"StopAction configure");
     if ( stopAt != 0 ) {
-	StopAction* sa = new StopAction();
-	sa->setDeliveryTime(stopAt);
-	timeVortex->insert(sa);
+    StopAction* sa = new StopAction();
+    sa->setDeliveryTime(stopAt);
+    timeVortex->insert(sa);
     }
 }
 
@@ -174,7 +171,7 @@ Simulation::Simulation()
 
 
 Component*
-Simulation::createComponent( ComponentId_t id, std::string &name, 
+Simulation::createComponent( ComponentId_t id, const std::string& name,
                              Params &params )
 {
     return factory->CreateComponent(id, name, params);
@@ -182,11 +179,11 @@ Simulation::createComponent( ComponentId_t id, std::string &name,
 
 
 void
-Simulation::requireEvent(std::string name)
+Simulation::requireEvent(const std::string& name)
 {
     factory->RequireEvent(name);
 }
-    
+
 SimTime_t
 Simulation::getNextActivityTime() const
 {
@@ -255,7 +252,7 @@ Simulation::processGraphInfo( ConfigGraph& graph, const RankInfo& UNUSED(myRank)
             // Now check only those latencies that directly impact this
             // thread.  Keep track of minimum latency for each other
             // thread separately
-            if ( rank[0].thread == my_rank.thread) { 
+            if ( rank[0].thread == my_rank.thread) {
                 if ( clink.getMinLatency() < interThreadLatencies[rank[1].thread] ) {
                     interThreadLatencies[rank[1].thread] = clink.getMinLatency();
                 }
@@ -281,7 +278,7 @@ Simulation::processGraphInfo( ConfigGraph& graph, const RankInfo& UNUSED(myRank)
         independent = false;
     }
 }
-    
+
 int Simulation::performWireUp( ConfigGraph& graph, const RankInfo& myRank, SimTime_t UNUSED(min_part))
 {
     // Create the Statistics Engine
@@ -300,7 +297,7 @@ int Simulation::performWireUp( ConfigGraph& graph, const RankInfo& myRank, SimTi
     {
         ConfigComponent* ccomp = &(*iter);
         if ( ccomp->rank == myRank ) {
-            compInfoMap.insert(new ComponentInfo(ccomp, ccomp->name, NULL, new LinkMap()));
+            compInfoMap.insert(new ComponentInfo(ccomp, ccomp->name, nullptr, new LinkMap()));
         }
     }
 
@@ -330,14 +327,14 @@ int Simulation::performWireUp( ConfigGraph& graph, const RankInfo& myRank, SimTi
 
             // Add this link to the appropriate LinkMap
             ComponentInfo* cinfo = compInfoMap.getByID(clink.component[0]);
-            if ( cinfo == NULL ) {
+            if ( cinfo == nullptr ) {
                 // This shouldn't happen and is an error
                 sim_output.fatal(CALL_INFO,1,"Couldn't find ComponentInfo in map.");
             }
             cinfo->getLinkMap()->insertLink(clink.port[0],lp.getLeft());
 
             cinfo = compInfoMap.getByID(clink.component[1]);
-            if ( cinfo == NULL ) {
+            if ( cinfo == nullptr ) {
                 // This shouldn't happen and is an error
                 sim_output.fatal(CALL_INFO,1,"Couldn't find ComponentInfo in map.");
             }
@@ -366,7 +363,7 @@ int Simulation::performWireUp( ConfigGraph& graph, const RankInfo& myRank, SimTi
 
             // Add this link to the appropriate LinkMap for the local component
             ComponentInfo* cinfo = compInfoMap.getByID(clink.component[local]);
-            if ( cinfo == NULL ) {
+            if ( cinfo == nullptr ) {
                 // This shouldn't happen and is an error
                 sim_output.fatal(CALL_INFO,1,"Couldn't find ComponentInfo in map.");
             }
@@ -426,7 +423,7 @@ void Simulation::initialize() {
         initBarrier.wait();
         if ( my_rank.thread == 0 ) untimed_msg_count = 0;
         initBarrier.wait();
-                
+
         for ( auto iter = compInfoMap.begin(); iter != compInfoMap.end(); ++iter ) {
             // printf("Calling init on %s: %p\n",(*iter)->getName().c_str(),(*iter)->getComponent());
             (*iter)->getComponent()->init(untimed_phase);
@@ -477,7 +474,7 @@ void Simulation::complete() {
         completeBarrier.wait();
         if ( my_rank.thread == 0 ) untimed_msg_count = 0;
         completeBarrier.wait();
-                
+
         for ( auto iter = compInfoMap.begin(); iter != compInfoMap.end(); ++iter ) {
             (*iter)->getComponent()->complete(untimed_phase);
         }
@@ -494,10 +491,10 @@ void Simulation::complete() {
 
 }
 
-void Simulation::setup() {  
+void Simulation::setup() {
 
     setupBarrier.wait();
-    
+
     for ( auto iter = compInfoMap.begin(); iter != compInfoMap.end(); ++iter ) {
         (*iter)->getComponent()->setup();
     }
@@ -513,7 +510,7 @@ void Simulation::run() {
     // Put a stop event at the end of the timeVortex. Simulation will
     // only get to this is there are no other events in the queue.
     // In general, this shouldn't happen, especially for parallel
-    // simulations. If it happens in a parallel simulation the 
+    // simulations. If it happens in a parallel simulation the
     // simulation will likely deadlock as only some of the ranks
     // will hit the anomaly.
     StopAction* sa = new StopAction("*** Event queue empty, exiting simulation... ***");
@@ -530,7 +527,7 @@ void Simulation::run() {
             timeVortex->insert(sa);
         }
     }
-    
+
     // Tell the Statistics Engine that the simulation is beginning
     if ( my_rank.thread == 0 )
         StatisticProcessingEngine::getInstance()->startOfSimulation();
@@ -607,7 +604,7 @@ void Simulation::endSimulation(SimTime_t end)
 
 
 }
-    
+
 
 void Simulation::finish() {
 
@@ -619,7 +616,7 @@ void Simulation::finish() {
     }
 
     finishBarrier.wait();
-    
+
     switch ( shutdown_mode ) {
     case SHUTDOWN_CLEAN:
         break;
@@ -633,7 +630,7 @@ void Simulation::finish() {
     }
 
     finishBarrier.wait();
-    
+
     // Tell the Statistics Engine that the simulation is ending
     if ( my_rank.thread == 0 ) {
         StatisticProcessingEngine::getInstance()->endOfSimulation();
@@ -643,19 +640,19 @@ void Simulation::finish() {
 const SimTime_t&
 Simulation::getCurrentSimCycle() const
 {
-    return currentSimCycle; 
+    return currentSimCycle;
 }
 
 SimTime_t
 Simulation::getEndSimCycle() const
 {
-    return endSimCycle; 
+    return endSimCycle;
 }
 
 int
 Simulation::getCurrentPriority() const
 {
-    return currentPriority; 
+    return currentPriority;
 }
 
 
@@ -764,7 +761,7 @@ void Simulation::unregisterClock(TimeConverter *tc, Clock::HandlerBase* handler,
     }
 }
 
-TimeConverter* Simulation::registerOneShot(std::string timeDelay, OneShot::HandlerBase* handler, int priority)
+TimeConverter* Simulation::registerOneShot(const std::string& timeDelay, OneShot::HandlerBase* handler, int priority)
 {
     return registerOneShot(UnitAlgebra(timeDelay), handler, priority);
 }
@@ -855,7 +852,7 @@ Core::ThreadSafe::Barrier Simulation::runBarrier;
 Core::ThreadSafe::Barrier Simulation::exitBarrier;
 Core::ThreadSafe::Barrier Simulation::finishBarrier;
 std::mutex Simulation::simulationMutex;
-TimeConverter* Simulation::minPartTC = NULL;
+TimeConverter* Simulation::minPartTC = nullptr;
 SimTime_t Simulation::minPart;
 
 

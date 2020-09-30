@@ -1,17 +1,17 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
 
-#include <sst_config.h>
-#include <sst/core/warnmacros.h>
+#include "sst_config.h"
+#include "sst/core/warnmacros.h"
 
 DISABLE_WARN_DEPRECATED_REGISTER
 #include <Python.h>
@@ -30,37 +30,37 @@ REENABLE_WARNING
 #include <signal.h>
 #include <time.h>
 
-#include <sst/core/activity.h>
-#include <sst/core/config.h>
-#include <sst/core/configGraph.h>
-#include <sst/core/factory.h>
-#include <sst/core/rankInfo.h>
-#include <sst/core/threadsafe.h>
-#include <sst/core/simulation.h>
-#include <sst/core/timeLord.h>
-#include <sst/core/timeVortex.h>
-#include <sst/core/part/sstpart.h>
-#include <sst/core/statapi/statengine.h>
+#include "sst/core/activity.h"
+#include "sst/core/config.h"
+#include "sst/core/configGraph.h"
+#include "sst/core/factory.h"
+#include "sst/core/rankInfo.h"
+#include "sst/core/threadsafe.h"
+#include "sst/core/simulation.h"
+#include "sst/core/timeLord.h"
+#include "sst/core/timeVortex.h"
+#include "sst/core/part/sstpart.h"
+#include "sst/core/statapi/statengine.h"
 
-#include <sst/core/cputimer.h>
+#include "sst/core/cputimer.h"
 
-#include <sst/core/model/sstmodel.h>
-#include <sst/core/model/pymodel.h>
-#include <sst/core/memuse.h>
-#include <sst/core/iouse.h>
+#include "sst/core/model/sstmodel.h"
+#include "sst/core/model/python/pymodel.h"
+#include "sst/core/memuse.h"
+#include "sst/core/iouse.h"
 
 #include <sys/resource.h>
 
-#include <sst/core/objectComms.h>
+#include "sst/core/objectComms.h"
 
 // Configuration Graph Generation Options
-#include <sst/core/configGraphOutput.h>
-#include <sst/core/cfgoutput/pythonConfigOutput.h>
-#include <sst/core/cfgoutput/dotConfigOutput.h>
-#include <sst/core/cfgoutput/xmlConfigOutput.h>
-#include <sst/core/cfgoutput/jsonConfigOutput.h>
+#include "sst/core/configGraphOutput.h"
+#include "sst/core/cfgoutput/pythonConfigOutput.h"
+#include "sst/core/cfgoutput/dotConfigOutput.h"
+#include "sst/core/cfgoutput/xmlConfigOutput.h"
+#include "sst/core/cfgoutput/jsonConfigOutput.h"
 
-#include <sst/core/eli/elementinfo.h>
+#include "sst/core/eli/elementinfo.h"
 
 using namespace SST::Core;
 using namespace SST::Partition;
@@ -86,42 +86,42 @@ SimulationSigHandler(int sig)
 static void setupSignals(uint32_t threadRank)
 {
     if ( 0 == threadRank ) {
-		if(SIG_ERR == signal(SIGUSR1, SimulationSigHandler)) {
-			g_output.fatal(CALL_INFO, 1, "Installation of SIGUSR1 signal handler failed.\n");
-		}
-		if(SIG_ERR == signal(SIGUSR2, SimulationSigHandler)) {
-			g_output.fatal(CALL_INFO, 1, "Installation of SIGUSR2 signal handler failed\n");
-		}
-		if(SIG_ERR == signal(SIGINT, SimulationSigHandler)) {
-			g_output.fatal(CALL_INFO, 1, "Installation of SIGINT signal handler failed\n");
-		}
-		if(SIG_ERR == signal(SIGALRM, SimulationSigHandler)) {
-			g_output.fatal(CALL_INFO, 1, "Installation of SIGALRM signal handler failed\n");
-		}
-		if(SIG_ERR == signal(SIGTERM, SimulationSigHandler)) {
-			g_output.fatal(CALL_INFO, 1, "Installation of SIGTERM signal handler failed\n");
-		}
+        if(SIG_ERR == signal(SIGUSR1, SimulationSigHandler)) {
+            g_output.fatal(CALL_INFO, 1, "Installation of SIGUSR1 signal handler failed.\n");
+        }
+        if(SIG_ERR == signal(SIGUSR2, SimulationSigHandler)) {
+            g_output.fatal(CALL_INFO, 1, "Installation of SIGUSR2 signal handler failed\n");
+        }
+        if(SIG_ERR == signal(SIGINT, SimulationSigHandler)) {
+            g_output.fatal(CALL_INFO, 1, "Installation of SIGINT signal handler failed\n");
+        }
+        if(SIG_ERR == signal(SIGALRM, SimulationSigHandler)) {
+            g_output.fatal(CALL_INFO, 1, "Installation of SIGALRM signal handler failed\n");
+        }
+        if(SIG_ERR == signal(SIGTERM, SimulationSigHandler)) {
+            g_output.fatal(CALL_INFO, 1, "Installation of SIGTERM signal handler failed\n");
+        }
 
-		g_output.verbose(CALL_INFO, 1, 0, "Signal handler registration is completed\n");
+        g_output.verbose(CALL_INFO, 1, 0, "Signal handler registration is completed\n");
     } else {
         /* Other threads don't want to receive the signal */
         sigset_t maskset;
         sigfillset(&maskset);
-        pthread_sigmask(SIG_BLOCK, &maskset, NULL);
+        pthread_sigmask(SIG_BLOCK, &maskset, nullptr);
     }
 }
 
 
 static void dump_partition(Config& cfg, ConfigGraph* graph, const RankInfo &size) {
 
-	///////////////////////////////////////////////////////////////////////	
-	// If the user asks us to dump the partitioned graph.
-	if(cfg.dump_component_graph_file != "") {
-		if(cfg.verbose) {
-			g_output.verbose(CALL_INFO, 1, 0,
-				"# Dumping partitioned component graph to %s\n",
-				cfg.dump_component_graph_file.c_str());
-		}
+    ///////////////////////////////////////////////////////////////////////
+    // If the user asks us to dump the partitioned graph.
+    if(cfg.dump_component_graph_file != "") {
+        if(cfg.verbose) {
+            g_output.verbose(CALL_INFO, 1, 0,
+                "# Dumping partitioned component graph to %s\n",
+                cfg.dump_component_graph_file.c_str());
+        }
 
         ofstream graph_file(cfg.dump_component_graph_file.c_str());
         ConfigComponentMap_t& component_map = graph->getComponentMap();
@@ -158,7 +158,7 @@ static void do_graph_wireup(ConfigGraph* graph,
         const RankInfo &myRank, SimTime_t min_part) {
 
     if ( !graph->containsComponentInRank( myRank ) ) {
-        g_output.output("WARNING: No components are assigned to rank: %u.%u\n", 
+        g_output.output("WARNING: No components are assigned to rank: %u.%u\n",
                 myRank.rank, myRank.thread);
     }
 
@@ -268,7 +268,7 @@ static void start_simulation(uint32_t tid, SimThreadInfo_t &info, Core::ThreadSa
         if ( info.config->verbose && 0 == tid ) {
             g_output.verbose(CALL_INFO, 1, 0, "# Starting main event loop\n");
 
-            time_t the_time = time(0);
+            time_t the_time = time(nullptr);
             struct tm* now = localtime( &the_time );
 
             g_output.verbose(CALL_INFO, 1, 0, "# Start time: %04u/%02u/%02u at: %02u:%02u:%02u\n",
@@ -323,7 +323,7 @@ static void start_simulation(uint32_t tid, SimThreadInfo_t &info, Core::ThreadSa
 
         sim->initialize();
         barrier.wait();
-        
+
         /* Run Set */
         sim->setup();
         barrier.wait();
@@ -343,7 +343,7 @@ static void start_simulation(uint32_t tid, SimThreadInfo_t &info, Core::ThreadSa
 
     info.simulated_time = sim->getFinalSimTime();
     // g_output.output(CALL_INFO,"Simulation time = %s\n",info.simulated_time.toStringBestSI().c_str());
-    
+
     double end_time = sst_get_cpu_time();
     info.run_time = end_time - start_run;
 
@@ -381,7 +381,7 @@ main(int argc, char *argv[])
     }
     world_size.thread = cfg.getNumThreads();
 
-    SSTModelDescription* modelGen = 0;
+    SSTModelDescription* modelGen = nullptr;
 
     if ( cfg.configFile != "NONE" ) {
         string file_ext = "";
@@ -414,14 +414,14 @@ main(int argc, char *argv[])
     Output::setWorldSize(world_size, myrank);
     g_output = Output::setDefaultObject(cfg.output_core_prefix, cfg.getVerboseLevel(), 0, Output::STDOUT);
 
-    
+
     g_output.verbose(CALL_INFO, 1, 0, "#main() My rank is (%u.%u), on %u/%u nodes/threads\n", myRank.rank,myRank.thread, world_size.rank, world_size.thread);
 
     // Get the memory before we create the graph
     const uint64_t pre_graph_create_rss = maxGlobalMemSize();
 
     ////// Start ConfigGraph Creation //////
-    ConfigGraph* graph = NULL;
+    ConfigGraph* graph = nullptr;
 
     double start_graph_gen = sst_get_cpu_time();
     graph = new ConfigGraph();
@@ -452,7 +452,7 @@ main(int argc, char *argv[])
 
     // Delete the model generator
     delete modelGen;
-    modelGen = NULL;
+    modelGen = nullptr;
 
     double end_graph_gen = sst_get_cpu_time();
 
@@ -564,8 +564,8 @@ main(int argc, char *argv[])
         g_output.verbose(CALL_INFO, 1, 0, "Signal handlers will be registered for USR1, USR2, INT and TERM...\n");
         setupSignals(0);
     } else {
-		// Print out to say disabled?
-		g_output.verbose(CALL_INFO, 1, 0, "Signal handlers are disabled by user input\n");
+        // Print out to say disabled?
+        g_output.verbose(CALL_INFO, 1, 0, "Signal handlers are disabled by user input\n");
     }
 
     ////// Broadcast Graph //////
@@ -589,7 +589,7 @@ main(int argc, char *argv[])
             }
 
             // Need to send the your_ranks set and the proper
-            // subgraph for further distribution                
+            // subgraph for further distribution
             ConfigGraph* your_graph = graph->getSubGraph(your_ranks);
             int dest = *your_ranks.begin();
             Comms::send(dest, 0, your_ranks);
@@ -705,7 +705,7 @@ main(int argc, char *argv[])
     uint64_t global_max_tv_depth = 0;
     uint64_t local_current_tv_depth = threadInfo[0].current_tv_depth;
     uint64_t global_current_tv_depth = 0;
-    
+
     uint64_t global_max_sync_data_size = 0, global_sync_data_size = 0;
 
     uint64_t mempool_size = 0, max_mempool_size = 0, global_mempool_size = 0;
@@ -766,7 +766,7 @@ main(int argc, char *argv[])
 
         sprintf(ua_buffer, "%" PRIu64 "B", global_mempool_size);
         UnitAlgebra global_mempool_size_ua(ua_buffer);
-        
+
         g_output.output( "\n");
         g_output.output("\n");
         g_output.output( "------------------------------------------------------------\n");
@@ -817,7 +817,7 @@ main(int argc, char *argv[])
         Activity::printUndeletedActivities("",out, MAX_SIMTIME_T);
     }
 #endif
-    
+
 #ifdef SST_CONFIG_HAVE_MPI
     if( 0 == myRank.rank ) {
 #endif

@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -21,9 +21,9 @@ class ConfigGraph;
  */
 class SSTModelDescription {
 
-	public:
-		SSTModelDescription();
-		virtual ~SSTModelDescription() {};
+    public:
+        SSTModelDescription();
+        virtual ~SSTModelDescription() {};
         /** Create the ConfigGraph
          *
          * This function should be overridden by subclasses.
@@ -31,7 +31,7 @@ class SSTModelDescription {
          * This function is responsible for reading any configuration
          * files and generating a ConfigGraph object.
          */
-		virtual ConfigGraph* createConfigGraph() = 0;
+        virtual ConfigGraph* createConfigGraph() = 0;
 
 };
 

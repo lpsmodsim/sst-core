@@ -1,26 +1,26 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
-#include <sst_config.h>
+#include "sst_config.h"
+#include "sst/core/statapi/statgroup.h"
 
 #include <algorithm>
 
-#include <sst/core/statapi/statgroup.h>
-#include <sst/core/statapi/statbase.h>
-#include <sst/core/statapi/statengine.h>
-#include <sst/core/statapi/statoutput.h>
-#include <sst/core/statapi/statgroup.h>
-#include <sst/core/configGraph.h>
-#include <sst/core/baseComponent.h>
-#include <sst/core/output.h>
+#include "sst/core/statapi/statgroup.h"
+#include "sst/core/statapi/statbase.h"
+#include "sst/core/statapi/statengine.h"
+#include "sst/core/statapi/statoutput.h"
+#include "sst/core/configGraph.h"
+#include "sst/core/baseComponent.h"
+#include "sst/core/output.h"
 
 namespace SST {
 namespace Statistics {

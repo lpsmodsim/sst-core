@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <sst/core/interprocess/circularBuffer.h>
+#include "sst/core/interprocess/circularBuffer.h"
 
 namespace SST {
 namespace Core {
@@ -59,7 +59,7 @@ public:
      * @param numBuffers Number of buffers for which we should tunnel
      * @param bufferSize How large each core's buffer should be
      */
-    IPCTunnel(uint32_t comp_id, size_t numBuffers, size_t bufferSize, uint32_t expectedChildren = 1) : master(true), shmPtr(NULL), fd(-1)
+    IPCTunnel(uint32_t comp_id, size_t numBuffers, size_t bufferSize, uint32_t expectedChildren = 1) : master(true), shmPtr(nullptr), fd(-1)
     {
         char key[256];
         memset(key, '\0', sizeof(key));
@@ -90,7 +90,7 @@ public:
             exit(1);
         }
 
-        shmPtr = mmap(NULL, shmSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+        shmPtr = mmap(nullptr, shmSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         if ( shmPtr == MAP_FAILED ) {
             // Not using Output because IPC means Output might not be available
             fprintf(stderr, "mmap failed: %s\n", strerror(errno));
@@ -114,12 +114,13 @@ public:
         /* Construct the circular buffers */
         const size_t cbSize = sizeof(MsgType) * bufferSize;
         for ( size_t c = 0 ; c < isd->numBuffers ; c++ ) {
-            CircBuff_t* cPtr = NULL;
+            CircBuff_t* cPtr = nullptr;
 
             auto resResult = reserveSpace<CircBuff_t>(cbSize);
             isd->offsets[1+c] = resResult.first;
             cPtr = resResult.second;
-            cPtr->setBufferSize(bufferSize);
+            if (!cPtr->setBufferSize(bufferSize))
+                exit(1);
             circBuffs.push_back(cPtr);
         }
 
@@ -129,7 +130,7 @@ public:
      * Access an existing Tunnel
      * @param region_name Name of the shared-memory region to access
      */
-    IPCTunnel(const std::string &region_name) : master(false), shmPtr(NULL), fd(-1)
+    IPCTunnel(const std::string& region_name) : master(false), shmPtr(nullptr), fd(-1)
     {
         fd = shm_open(region_name.c_str(), O_RDWR, S_IRUSR|S_IWUSR);
         filename = region_name;
@@ -141,7 +142,7 @@ public:
             exit(1);
         }
 
-        shmPtr = mmap(NULL, sizeof(InternalSharedData), PROT_READ, MAP_SHARED, fd, 0);
+        shmPtr = mmap(nullptr, sizeof(InternalSharedData), PROT_READ, MAP_SHARED, fd, 0);
         if ( shmPtr == MAP_FAILED ) {
             // Not using Output because IPC means Output might not be available
             fprintf(stderr, "mmap 0 failed: %s\n", strerror(errno));
@@ -152,7 +153,7 @@ public:
         shmSize = isd->shmSegSize;
         munmap(shmPtr, sizeof(InternalSharedData));
 
-        shmPtr = mmap(NULL, shmSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+        shmPtr = mmap(nullptr, shmSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         if ( shmPtr == MAP_FAILED ) {
             // Not using Output because IPC means Output might not be available
             fprintf(stderr, "mmap 1 failed: %s\n", strerror(errno));
@@ -192,7 +193,7 @@ public:
         }
         if ( shmPtr ) {
             munmap(shmPtr, shmSize);
-            shmPtr = NULL;
+            shmPtr = nullptr;
             shmSize = 0;
         }
         if ( fd >= 0 ) {
@@ -233,7 +234,7 @@ private:
     {
         size_t space = sizeof(T) + extraSpace;
         if ( ((nextAllocPtr + space) - (uint8_t*)shmPtr) > shmSize )
-            return std::make_pair<size_t, T*>(0, NULL);
+            return std::make_pair<size_t, T*>(0, nullptr);
         T* ptr = (T*)nextAllocPtr;
         nextAllocPtr += space;
         new (ptr) T();  // Call constructor if need be
@@ -260,9 +261,10 @@ protected:
 
 private:
     bool master;
-    int fd;
-    std::string filename;
     void *shmPtr;
+    int fd;
+
+    std::string filename;
     uint8_t *nextAllocPtr;
     size_t shmSize;
     InternalSharedData *isd;

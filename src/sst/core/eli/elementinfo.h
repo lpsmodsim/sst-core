@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -12,24 +12,23 @@
 #ifndef SST_CORE_ELEMENTINFO_H
 #define SST_CORE_ELEMENTINFO_H
 
-#include <sst/core/sst_types.h>
-#include <sst/core/warnmacros.h>
-#include <sst/core/params.h>
-#include <sst/core/statapi/statfieldinfo.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/warnmacros.h"
+#include "sst/core/params.h"
 
-#include <sst/core/eli/paramsInfo.h>
-#include <sst/core/eli/statsInfo.h>
-#include <sst/core/eli/defaultInfo.h>
-#include <sst/core/eli/portsInfo.h>
-#include <sst/core/eli/subcompSlotInfo.h>
-#include <sst/core/eli/interfaceInfo.h>
-#include <sst/core/eli/categoryInfo.h>
-#include <sst/core/eli/elementbuilder.h>
+#include "sst/core/eli/paramsInfo.h"
+#include "sst/core/eli/statsInfo.h"
+#include "sst/core/eli/defaultInfo.h"
+#include "sst/core/eli/portsInfo.h"
+#include "sst/core/eli/subcompSlotInfo.h"
+#include "sst/core/eli/interfaceInfo.h"
+#include "sst/core/eli/categoryInfo.h"
+#include "sst/core/eli/elementbuilder.h"
 
 #include <string>
 #include <vector>
 
-#include <sst/core/eli/elibase.h>
+#include "sst/core/eli/elibase.h"
 
 namespace SST {
 class Component;
@@ -208,14 +207,32 @@ private:
 template <class Base> typename InfoLibraryDatabase<Base>::Map*
 InfoLibraryDatabase<Base>::libraries = nullptr;
 
+template <class Base, class Info>
+struct InfoLoader : public LibraryLoader {
+  InfoLoader(const std::string& elemlib,
+                        const std::string& elem,
+                        Info* info) :
+    elemlib_(elemlib), elem_(elem), info_(info)
+  {
+  }
+
+  void load() override {
+    auto* lib = InfoLibraryDatabase<Base>::getLibrary(elemlib_);
+    if (!lib->hasInfo(elem_)){
+        lib->readdInfo(elem_, info_);
+    }
+  }
+ private:
+  std::string elemlib_;
+  std::string elem_;
+  Info* info_;
+};
+
 template <class Base> void InfoLibrary<Base>::addLoader(const std::string& elemlib, const std::string& elem,
                                                         BaseInfo* info){
-    LoadedLibraries::addLoader(elemlib, elem, [=]{
-                                                  auto* lib = InfoLibraryDatabase<Base>::getLibrary(elemlib);
-                                                  if (!lib->hasInfo(elem)){
-                                                      lib->readdInfo(elem, info);
-                                                  }
-                                              });
+
+   auto loader = new InfoLoader<Base,BaseInfo>(elemlib, elem, info);
+   LoadedLibraries::addLoader(elemlib, elem, loader);
 }
 
 
@@ -252,9 +269,9 @@ struct SST_ELI_element_version_extraction {
     const unsigned minor;
     const unsigned tertiary;
 
-    constexpr unsigned getMajor() { return major; }
-    constexpr unsigned getMinor() { return minor; }
-    constexpr unsigned getTertiary() { return tertiary; }
+    constexpr unsigned getMajor() const { return major; }
+    constexpr unsigned getMinor() const { return minor; }
+    constexpr unsigned getTertiary() const { return tertiary; }
 };
 
 constexpr unsigned SST_ELI_getMajorNumberFromVersion(SST_ELI_element_version_extraction ver) {
@@ -277,10 +294,10 @@ constexpr unsigned SST_ELI_getTertiaryNumberFromVersion(SST_ELI_element_version_
 #define SST_ELI_DECLARE_INFO(...) \
   using BuilderInfo = ::SST::ELI::BuilderInfoImpl<__VA_ARGS__,SST::ELI::ProvidesDefaultInfo,void>; \
   template <class BuilderImpl> static bool addInfo(const std::string& elemlib, const std::string& elem, \
-                                   	     BuilderImpl* info){ \
+                                            BuilderImpl* info){ \
     return ::SST::ELI::InfoDatabase::getLibrary<__LocalEliBase>(elemlib)->addInfo(elem,info); \
   } \
-  SST_ELI_DECLARE_INFO_COMMON() 
+  SST_ELI_DECLARE_INFO_COMMON()
 
 
 #define SST_ELI_DECLARE_DEFAULT_INFO() \
@@ -289,7 +306,7 @@ constexpr unsigned SST_ELI_getTertiaryNumberFromVersion(SST_ELI_element_version_
                                                    BuilderImpl* info){ \
     return ::SST::ELI::InfoDatabase::getLibrary<__LocalEliBase>(elemlib)->addInfo(elem,info); \
   } \
-  SST_ELI_DECLARE_INFO_COMMON() 
+  SST_ELI_DECLARE_INFO_COMMON()
 
 
 #define SST_ELI_DECLARE_INFO_EXTERN(...) \
@@ -300,7 +317,7 @@ constexpr unsigned SST_ELI_getTertiaryNumberFromVersion(SST_ELI_element_version_
 #define SST_ELI_DECLARE_DEFAULT_INFO_EXTERN() \
   using BuilderInfo = ::SST::ELI::BuilderInfoImpl<SST::ELI::ProvidesDefaultInfo,void>; \
   static bool addInfo(const std::string& elemlib, const std::string& elem, BuilderInfo* info); \
-  SST_ELI_DECLARE_INFO_COMMON() 
+  SST_ELI_DECLARE_INFO_COMMON()
 
 #define SST_ELI_DEFINE_INFO_EXTERN(base) \
   bool base::addInfo(const std::string& elemlib, const std::string& elem, BuilderInfo* info){ \

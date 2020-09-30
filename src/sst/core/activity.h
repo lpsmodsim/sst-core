@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -13,21 +13,19 @@
 #ifndef SST_CORE_ACTIVITY_H
 #define SST_CORE_ACTIVITY_H
 
-#include <sst/core/sst_types.h>
-#include <sst/core/warnmacros.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/warnmacros.h"
 
-#include <sst/core/serialization/serializable.h>
+#include "sst/core/serialization/serializable.h"
 
-#include <sst/core/output.h>
-#include <sst/core/mempool.h>
+#include "sst/core/output.h"
+#include "sst/core/mempool.h"
 
 #include <unordered_map>
 #include <cinttypes>
 #include <cstring>
 
 #include <errno.h>
-
-// #include <sst/core/serialization/serializable.h>
 
 // Default Priority Settings
 #define STOPACTIONPRIORITY     01
@@ -71,10 +69,10 @@ public:
                     /* TODO:  Handle 64-bit wrap-around */
                     return lhs->enforce_link_order > rhs->enforce_link_order;
                 } else {
-               	    return lhs->priority > rhs->priority;
+                    return lhs->priority > rhs->priority;
                 }
             } else {
-            	return lhs->delivery_time > rhs->delivery_time;
+                return lhs->delivery_time > rhs->delivery_time;
             }
         }
 
@@ -88,11 +86,11 @@ public:
                     return lhs.priority > rhs.priority;
                 }
             } else {
-            	return lhs.delivery_time > rhs.delivery_time;
+                return lhs.delivery_time > rhs.delivery_time;
             }
         }
     };
-    
+
     /** To use with STL priority queues, that order in reverse. */
     class pq_less_time_priority_order {
     public:
@@ -108,10 +106,10 @@ public:
                         return lhs->enforce_link_order > rhs->enforce_link_order;
                     }
                 } else {
-               	    return lhs->priority > rhs->priority;
+                    return lhs->priority > rhs->priority;
                 }
             } else {
-            	return lhs->delivery_time > rhs->delivery_time;
+                return lhs->delivery_time > rhs->delivery_time;
             }
         }
 
@@ -129,13 +127,13 @@ public:
                     return lhs.priority > rhs.priority;
                 }
             } else {
-            	return lhs.delivery_time > rhs.delivery_time;
+                return lhs.delivery_time > rhs.delivery_time;
             }
         }
     };
-    
+
 #endif
-    
+
     /** Comparator class to use with STL container classes. */
     class less_time_priority {
     public:
@@ -162,10 +160,10 @@ public:
                     /* TODO:  Handle 64-bit wrap-around */
                     return lhs->queue_order > rhs->queue_order;
                 } else {
-               	    return lhs->priority > rhs->priority;
+                    return lhs->priority > rhs->priority;
                 }
             } else {
-            	return lhs->delivery_time > rhs->delivery_time;
+                return lhs->delivery_time > rhs->delivery_time;
             }
         }
 
@@ -179,7 +177,7 @@ public:
                     return lhs.priority > rhs.priority;
                 }
             } else {
-            	return lhs.delivery_time > rhs.delivery_time;
+                return lhs.delivery_time > rhs.delivery_time;
             }
         }
     };
@@ -218,7 +216,7 @@ public:
      */
     virtual void print(const std::string& header, Output &out) const {
         out.output("%s Generic Activity to be delivered at %" PRIu64 " with priority %d\n",
-                header.c_str(), delivery_time, priority);
+                   header.c_str(), delivery_time, priority);
     }
 
 #ifdef __SST_DEBUG_EVENT_TRACKING__
@@ -233,14 +231,14 @@ public:
 
 #ifdef USE_MEMPOOL
     /** Allocates memory from a memory pool for a new Activity */
-	void* operator new(std::size_t size) noexcept
+    void* operator new(std::size_t size) noexcept
     {
         /* 1) Find memory pool
          * 1.5) If not found, create new
          * 2) Alloc item from pool
          * 3) Append PoolID to item, increment pointer
          */
-        Core::MemPool *pool = NULL;
+        Core::MemPool *pool = nullptr;
         size_t nPools = memPools.size();
         std::thread::id tid = std::this_thread::get_id();
         for ( size_t i = 0 ; i < nPools ; i++ ) {
@@ -250,7 +248,7 @@ public:
                 break;
             }
         }
-        if ( NULL == pool ) {
+        if ( nullptr == pool ) {
             /* Still can't find it, alloc a new one */
             pool = new Core::MemPool(size+sizeof(PoolData_t));
 
@@ -261,7 +259,7 @@ public:
         PoolData_t *ptr = (PoolData_t*)pool->malloc();
         if ( !ptr ) {
             fprintf(stderr, "Memory Pool failed to allocate a new object.  Error: %s\n", strerror(errno));
-            return NULL;
+            return nullptr;
         }
         *ptr = pool;
         return (void*)(ptr+1);
@@ -269,28 +267,28 @@ public:
 
 
     /** Returns memory for this Activity to the appropriate memory pool */
-	void operator delete(void* ptr)
+    void operator delete(void* ptr)
     {
         /* 1) Decrement pointer
          * 2) Determine Pool Pointer
-         * 2b) Set Pointer field to NULL to allow tracking
+         * 2b) Set Pointer field to nullptr to allow tracking
          * 3) Return to pool
          */
         PoolData_t *ptr8 = ((PoolData_t*)ptr) - 1;
         Core::MemPool* pool = *ptr8;
-        *ptr8 = NULL;
+        *ptr8 = nullptr;
 
         pool->free(ptr8);
     }
     void operator delete(void* ptr, std::size_t UNUSED(sz)){
         /* 1) Decrement pointer
          * 2) Determine Pool Pointer
-         * 2b) Set Pointer field to NULL to allow tracking
+         * 2b) Set Pointer field to nullptr to allow tracking
          * 3) Return to pool
          */
         PoolData_t *ptr8 = ((PoolData_t*)ptr) - 1;
         Core::MemPool* pool = *ptr8;
-        *ptr8 = NULL;
+        *ptr8 = nullptr;
 
         pool->free(ptr8);
     };
@@ -303,7 +301,7 @@ public:
             active_activities += entry.pool->getUndeletedEntries();
         }
     }
-    
+
     static void printUndeletedActivities(const std::string& header, Output &out, SimTime_t before = MAX_SIMTIME_T) {
         for ( auto && entry : Activity::memPools ) {
             const std::list<uint8_t*>& arenas = entry.pool->getArenas();
@@ -313,7 +311,7 @@ public:
             for ( auto iter = arenas.begin(); iter != arenas.end(); ++iter ) {
                 for ( size_t j = 0; j < nelem; j++ ) {
                     PoolData_t* ptr = (PoolData_t*)((*iter) + (elemSize*j));
-                    if ( *ptr != NULL ) {
+                    if ( *ptr != nullptr ) {
                         Activity* act = (Activity*)(ptr + 1);
                         if ( act->delivery_time <= before ) {
                             act->print(header, out);
@@ -326,15 +324,15 @@ public:
             }
         }
     }
-    
+
 #endif
 
     // /* Serializable interface methods */
     // void serialize_order(serializer &ser);
 
 
-    
-    
+
+
 protected:
     /** Set the priority of the Activity */
     void setPriority(int priority) {
@@ -351,7 +349,7 @@ protected:
 #ifdef SST_ENFORCE_EVENT_ORDERING
         ser & enforce_link_order;
 #endif
-    }    
+    }
 
 #ifdef SST_ENFORCE_EVENT_ORDERING
     int32_t   enforce_link_order;
@@ -373,7 +371,7 @@ private:
         { }
     };
     static std::mutex poolMutex;
-	static std::vector<PoolInfo_t> memPools;
+    static std::vector<PoolInfo_t> memPools;
 #endif
 };
 

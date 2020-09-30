@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -61,17 +61,17 @@ SST releases.
 class EnvironmentConfigGroup {
 
 public:
-	EnvironmentConfigGroup(std::string name) : groupName(name) {}
-	std::string getName() const;
-	std::set<std::string> getKeys() const;
-	std::string getValue(std::string key);
-	void setValue(std::string key, std::string value);
-	void print();
-	void writeTo(FILE* outFile);
+    EnvironmentConfigGroup(const std::string& name) : groupName(name) {}
+    std::string getName() const;
+    std::set<std::string> getKeys() const;
+    std::string getValue(const std::string& key);
+    void setValue(const std::string& key, const std::string& value);
+    void print();
+    void writeTo(FILE* outFile);
 
 protected:
-	std::string groupName;
-	std::map<std::string, std::string> params;
+    std::string groupName;
+    std::map<std::string, std::string> params;
 
 };
 
@@ -107,19 +107,19 @@ with SST releases.
 class EnvironmentConfiguration {
 
 public:
-	EnvironmentConfiguration();
-	~EnvironmentConfiguration();
+    EnvironmentConfiguration();
+    ~EnvironmentConfiguration();
 
-	EnvironmentConfigGroup* createGroup(std::string groupName);
-	void removeGroup(std::string groupName);
-	std::set<std::string> getGroupNames();
-	EnvironmentConfigGroup* getGroupByName(std::string groupName);
-	void print();
-	void writeTo(std::string filePath);
-	void writeTo(FILE* outFile);
+    EnvironmentConfigGroup* createGroup(const std::string& groupName);
+    void removeGroup(const std::string& groupName);
+    std::set<std::string> getGroupNames();
+    EnvironmentConfigGroup* getGroupByName(const std::string& groupName);
+    void print();
+    void writeTo(const std::string& filePath);
+    void writeTo(FILE* outFile);
 
 private:
-	std::map<std::string, EnvironmentConfigGroup*> groups;
+    std::map<std::string, EnvironmentConfigGroup*> groups;
 
 };
 

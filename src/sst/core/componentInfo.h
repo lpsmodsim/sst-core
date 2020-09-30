@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -12,8 +12,8 @@
 #ifndef SST_CORE_COMPONENTINFO_H
 #define SST_CORE_COMPONENTINFO_H
 
-#include <sst/core/sst_types.h>
-#include <sst/core/params.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/params.h"
 
 #include <unordered_set>
 #include <map>
@@ -44,8 +44,6 @@ public:
     static const uint64_t SHARE_STATS = 0x2;
     static const uint64_t INSERT_STATS = 0x4;
 
-    // Temporary, only for backward compatibility with loadSubComponent
-    static const uint64_t IS_LEGACY_SUBCOMPONENT = 0x32;
 
     static const uint64_t SHARE_NONE = 0x0;
 
@@ -54,7 +52,7 @@ private:
     // Mask to make sure users are only setting the flags that are
     // available to them
     static const uint64_t USER_FLAGS = 0x7;
-    
+
     // Friend classes
     friend class Simulation;
     friend class BaseComponent;
@@ -102,7 +100,7 @@ private:
     std::map<ComponentId_t,ComponentInfo> subComponents;
 
     /**
-       Parameters defined in the python file for the (Sub)Component.  
+       Parameters defined in the python file for the (Sub)Component.
 
        This field is used for only a short time while loading for
        SubComponents loaded with loadAnonymousSubComponent().
@@ -112,15 +110,18 @@ private:
     const Params *params;
 
     TimeConverter* defaultTimeBase;
-    
+
     statEnableList_t * enabledStats;
+
+    uint8_t statLoadLevel;
+
     std::vector<double> coordinates;
 
     uint64_t subIDIndex;
-    
+
 
     // Variables only used by SubComponents
-    
+
     /**
        Name of the slot this SubComponent was loaded into.  This field
        is not used for Components.
@@ -144,25 +145,20 @@ private:
     bool sharesPorts() {
         return (share_flags & SHARE_PORTS) != 0;
     }
-    
+
     bool sharesStatistics() {
         return (share_flags & SHARE_STATS) != 0;
     }
-    
+
     bool canInsertStatistics() {
         return (share_flags & INSERT_STATS) != 0;
     }
-    
-    bool isLegacySubComponent() {
-        return (share_flags & IS_LEGACY_SUBCOMPONENT) != 0;
-    }
-    
 
     inline void setComponent(BaseComponent* comp) { component = comp; }
     // inline void setParent(BaseComponent* comp) { parent = comp; }
 
     /* Lookup Key style constructor */
-    ComponentInfo(ComponentId_t id, const std::string &name);
+    ComponentInfo(ComponentId_t id, const std::string& name);
     void finalizeLinkConfiguration() const;
     void prepareForComplete() const;
 
@@ -170,15 +166,15 @@ private:
                                            const std::string& slot_name, int slot_num,
                                            uint64_t share_flags);
 
-    
+
 public:
     /* Old ELI Style subcomponent constructor */
-    ComponentInfo(const std::string &type, const Params *params, const ComponentInfo *parent_info);
+    ComponentInfo(const std::string& type, const Params *params, const ComponentInfo *parent_info);
 
     /* Anonymous SubComponent */
     ComponentInfo(ComponentId_t id, ComponentInfo* parent_info, const std::string& type, const std::string& slot_name,
                   int slot_num, uint64_t share_flags/*, const Params& params_in*/);
-    
+
     /* New ELI Style */
     ComponentInfo(ConfigComponent *ccomp, const std::string& name, ComponentInfo* parent_info, LinkMap* link_map);
     ComponentInfo(ComponentInfo &&o);
@@ -191,11 +187,11 @@ public:
     bool isUser() {
         return !COMPDEFINED_SUBCOMPONENT_ID_MASK(id);
     }
-    
+
     inline ComponentId_t getID() const { return id; }
 
     inline const std::string& getName() const {
-        if ( name.empty() ) return parent_info->getName();
+        if ( name.empty() && parent_info ) return parent_info->getName();
         return name;
     }
 
@@ -208,15 +204,17 @@ public:
     inline BaseComponent* getComponent() const { return component; }
 
     LinkMap* getLinkMap();
-    
+
     inline const Params* getParams() const { return params; }
 
     // inline std::map<std::string, ComponentInfo>& getSubComponents() { return subComponents; }
     inline std::map<ComponentId_t,ComponentInfo>& getSubComponents() { return subComponents; }
 
-    ComponentInfo* findSubComponent(std::string slot, int slot_num);
+    ComponentInfo* findSubComponent(const std::string& slot, int slot_num);
     ComponentInfo* findSubComponent(ComponentId_t id);
     std::vector<LinkId_t> getAllLinkIds() const;
+
+    uint8_t getStatisticLoadLevel() { return statLoadLevel; }
 
     statEnableList_t* getStatEnableList() { return enabledStats; }
 
@@ -273,7 +271,7 @@ public:
     ComponentInfo* getByID(const ComponentId_t key) const {
         ComponentInfo infoKey(COMPONENT_ID_MASK(key), "");
         auto value = dataByID.find(&infoKey);
-        if ( value == dataByID.end() ) return NULL;
+        if ( value == dataByID.end() ) return nullptr;
         if ( SUBCOMPONENT_ID_MASK(key) != 0 ) {
             // Looking for a subcomponent
             return (*value)->findSubComponent(key);
@@ -292,7 +290,7 @@ public:
         dataByID.clear();
     }
 };
-    
+
 } //namespace SST
 
 #endif // SST_CORE_COMPONENTINFO_H

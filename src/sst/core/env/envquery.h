@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -12,9 +12,9 @@
 #ifndef _H_SST_CORE_ENV_QUERY_H
 #define _H_SST_CORE_ENV_QUERY_H
 
-#include <sst_config.h>
+#include "sst_config.h"
 
-#include <sst/core/env/envconfig.h>
+#include "sst/core/env/envconfig.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -38,14 +38,14 @@ Opens a configuration file specified and populates an
 EnvironmentConfiguration instance with the contents.
 */
 void populateEnvironmentConfig(const std::string& path, EnvironmentConfiguration* cfg,
-	bool errorOnNotOpen);
+    bool errorOnNotOpen);
 
 /**
 Uses an already open file, reads the contents and populates an instance
 of an EnvironmentConfiguration with the contents
 */
 void populateEnvironmentConfig(FILE* configFile, EnvironmentConfiguration* cfg,
-	bool errorOnNotOpen);
+    bool errorOnNotOpen);
 
 /**
 Provides an SST-guaranteed precedence ordering loading of configuration

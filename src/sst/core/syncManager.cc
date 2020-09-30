@@ -1,18 +1,18 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
 #include "sst_config.h"
-
-#include <sst/core/warnmacros.h>
 #include "sst/core/syncManager.h"
+
+#include "sst/core/warnmacros.h"
 
 #include "sst/core/exit.h"
 #include "sst/core/simulation.h"
@@ -37,7 +37,7 @@ REENABLE_WARNING
 namespace SST {
 
 // Static data members
-NewRankSync* SyncManager::rankSync = NULL;
+NewRankSync* SyncManager::rankSync = nullptr;
 Core::ThreadSafe::Barrier SyncManager::RankExecBarrier[6];
 Core::ThreadSafe::Barrier SyncManager::LinkUntimedBarrier[3];
 SimTime_t SyncManager::next_rankSync = MAX_SIMTIME_T;
@@ -50,19 +50,19 @@ public:
     ~EmptyRankSync() {}
 
     /** Register a Link which this Sync Object is responsible for */
-    ActivityQueue* registerLink(const RankInfo& UNUSED(to_rank), const RankInfo& UNUSED(from_rank), LinkId_t UNUSED(link_id), Link* UNUSED(link)) override { return NULL; }
+    ActivityQueue* registerLink(const RankInfo& UNUSED(to_rank), const RankInfo& UNUSED(from_rank), LinkId_t UNUSED(link_id), Link* UNUSED(link)) override { return nullptr; }
 
     void execute(int UNUSED(thread)) override {}
     void exchangeLinkUntimedData(int UNUSED_WO_MPI(thread), std::atomic<int>& UNUSED_WO_MPI(msg_count)) override {
         // Even though there are no links crossing ranks, we still
         // need to make sure every rank does the same number of init
         // cycles so the shared memory regions initialization works.
-        
+
 #ifdef SST_CONFIG_HAVE_MPI
         if ( thread != 0 ) {
             return;
         }
-        
+
         // Do an allreduce to see if there were any messages sent
         int input = msg_count;
 
@@ -98,7 +98,7 @@ public:
 
     /** Register a Link which this Sync Object is responsible for */
     void registerLink(LinkId_t UNUSED(link_id), Link* UNUSED(link)) override {}
-    ActivityQueue* getQueueForThread(int UNUSED(tid)) override { return NULL; }
+    ActivityQueue* getQueueForThread(int UNUSED(tid)) override { return nullptr; }
 };
 
 
@@ -106,7 +106,7 @@ SyncManager::SyncManager(const RankInfo& rank, const RankInfo& num_ranks, TimeCo
     Action(),
     rank(rank),
     num_ranks(num_ranks),
-    threadSync(NULL),
+    threadSync(nullptr),
     min_part(min_part)
 {
     sim = Simulation::getSimulation();
@@ -152,7 +152,7 @@ ActivityQueue*
 SyncManager::registerLink(const RankInfo& to_rank, const RankInfo& from_rank, LinkId_t link_id, Link* link)
 {
     if ( to_rank == from_rank ) {
-        return NULL;  // This should never happen
+        return nullptr;  // This should never happen
     }
 
     if ( to_rank.rank == from_rank.rank ) {
@@ -182,7 +182,7 @@ SyncManager::execute(void)
         // guarantee that all events have been sent to the appropriate
         // queues.
         RankExecBarrier[0].wait();
-        
+
         // For a rank sync, we will force a thread sync first.  This
         // will ensure that all events sent between threads will be
         // flushed into their respective TimeVortices.  We need to do
@@ -193,7 +193,7 @@ SyncManager::execute(void)
         // Need to make sure everyone has made it through the mutex
         // and the min time computation is complete
         RankExecBarrier[1].wait();
-        
+
         // Now call the actual RankSync
         rankSync->execute(rank.thread);
 
@@ -203,8 +203,8 @@ SyncManager::execute(void)
         threadSync->after();
 
         RankExecBarrier[3].wait();
-        
-        if ( exit != NULL && rank.thread == 0 ) exit->check();
+
+        if ( exit != nullptr && rank.thread == 0 ) exit->check();
 
         RankExecBarrier[4].wait();
 
@@ -216,13 +216,13 @@ SyncManager::execute(void)
     case THREAD:
 
         threadSync->execute();
-        
+
         if ( /*num_ranks.rank == 1*/ min_part == MAX_SIMTIME_T ) {
             if ( exit->getRefCount() == 0 ) {
                 endSimulation(exit->getEndTime());
             }
         }
-        
+
         break;
     default:
         break;
@@ -235,7 +235,7 @@ SyncManager::execute(void)
 void
 SyncManager::exchangeLinkUntimedData(std::atomic<int>& msg_count)
 {
-    // TraceFunction trace(CALL_INFO_LONG);    
+    // TraceFunction trace(CALL_INFO_LONG);
     LinkUntimedBarrier[0].wait();
     threadSync->processLinkUntimedData();
     LinkUntimedBarrier[1].wait();

@@ -8,16 +8,13 @@ CXX = $(MPICXX)
 AM_CPPFLAGS =  \
 	-DTIXML_USE_STL \
 	-DSST_BUILDING_CORE=1 \
-	$(BOOST_CPPFLAGS) \
 	$(ZOLTAN_CPPFLAGS) \
 	$(PYTHON_CPPFLAGS) \
 	$(LTDLINCL)
 
-
-
 DIST_SUBDIRS = libltdl .
 SUBDIRS = libltdl .
-EXTRA_DIST = mainpage.dox
+EXTRA_DIST = mainpage.dox eli/README.md
 
 sstdir = $(includedir)/sst/core
 nobase_dist_sst_HEADERS = \
@@ -39,9 +36,7 @@ nobase_dist_sst_HEADERS = \
 	decimal_fixedpoint.h \
 	env/envquery.h \
 	env/envconfig.h \
-	elementinfo.h \
 	elemLoader.h \
-	elibase.h \
 	event.h \
 	exit.h \
 	factory.h \
@@ -120,6 +115,11 @@ nobase_dist_sst_HEADERS = \
 	interfaces/stringEvent.h \
 	interfaces/simpleMem.h \
 	interfaces/simpleNetwork.h \
+	interprocess/tunneldef.h \
+	interprocess/mmapparent.h \
+	interprocess/mmapchild_pin3.h \
+	interprocess/shmchild.h \
+	interprocess/shmparent.h \
 	interprocess/circularBuffer.h \
 	interprocess/sstmutex.h \
 	interprocess/ipctunnel.h \
@@ -152,6 +152,10 @@ nobase_dist_sst_HEADERS = \
 	cputimer.h \
 	warnmacros.h \
 	model/element_python.h
+
+
+deprecated_nobase_dist_sst_headers = 
+
 
 nobase_nodist_sst_HEADERS = \
 	build_info.h \
@@ -199,9 +203,9 @@ sst_core_sources = \
 	timeLord.cc \
 	uninitializedQueue.cc \
 	unitAlgebra.cc \
-  module.cc \
-  sstpart.cc \
-  timeVortex.cc \
+	module.cc \
+	sstpart.cc \
+	timeVortex.cc \
 	serialization/serializable.cc \
 	serialization/serialize_serializable.cc \
 	serialization/serializer.cc \
@@ -210,6 +214,8 @@ sst_core_sources = \
 	interfaces/simpleMem.cc \
 	interfaces/simpleNetwork.cc \
 	interprocess/ipctunnel.cc \
+	interprocess/mmapparent.cc \
+	interprocess/shmparent.cc \
 	rng/sstrng.cc \
 	rng/marsaglia.cc \
 	rng/mersenne.cc \
@@ -276,7 +282,6 @@ sstsim_x_LDADD = \
 	$(PYTHON_LIBS) \
 	$(ZOLTAN_LIB) \
 	$(PARMETIS_LIB) \
-	$(BOOST_LIBS) \
 	$(MPILIBS) \
 	$(TCMALLOC_LIB) \
 	-lm
@@ -285,8 +290,7 @@ sstsim_x_LDFLAGS = \
 	$(PARMETIS_LDFLAGS) \
 	$(ZOLTAN_LDFLAGS) \
 	$(TCMALLOC_LDFLAGS) \
-	$(BOOST_LDFLAGS) \
-        $(PYTHON_LDFLAGS) \
+	$(PYTHON_LDFLAGS) \
 	-export-dynamic \
 	$(SST_LTLIBS_ELEMLIBS)
 
@@ -294,7 +298,6 @@ sstinfo_x_LDADD = \
 	$(LIBLTDL) \
 	$(ZOLTAN_LIB) \
 	$(PARMETIS_LIB) \
-	$(BOOST_LIBS) \
 	$(MPILIBS) \
 	$(TCMALLOC_LIB) \
 	-lm
@@ -303,8 +306,7 @@ sstinfo_x_LDFLAGS = \
 	$(PARMETIS_LDFLAGS) \
 	$(ZOLTAN_LDFLAGS) \
 	$(TCMALLOC_LDFLAGS) \
-	$(BOOST_LDFLAGS) \
-        $(PYTHON_LDFLAGS) \
+	$(PYTHON_LDFLAGS) \
 	-export-dynamic \
 	$(SST_LTLIBS_ELEMLIBS)
 
@@ -312,6 +314,19 @@ include tinyxml/Makefile.inc
 include part/Makefile.inc
 include model/Makefile.inc
 include impl/Makefile.inc
+
+if !SST_ENABLE_PREVIEW_BUILD
+nobase_dist_sst_HEADERS += $(deprecated_nobase_dist_sst_headers)
+sst_core_sources += $(deprecated_sst_core_sources)
+endif
+
+sst_core_sources += $(sst_core_python_sources)
+nobase_dist_sst_HEADERS += $(sst_core_python_headers)
+
+if !SST_COMPILE_OSX
+sstsim_x_LDADD += -lrt
+sstinfo_x_LDADD += -lrt
+endif
 
 if USE_LIBZ
 sstsim_x_LDADD += $(LIBZ_LIBS)

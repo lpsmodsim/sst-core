@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -13,8 +13,8 @@
 #ifndef _H_SST_CORE_CONFIG_OUTPUT_PYTHON
 #define _H_SST_CORE_CONFIG_OUTPUT_PYTHON
 
-#include <sst/core/configGraph.h>
-#include <sst/core/configGraphOutput.h>
+#include "sst/core/configGraph.h"
+#include "sst/core/configGraphOutput.h"
 #include <map>
 
 namespace SST {
@@ -37,12 +37,12 @@ protected:
 
     const std::string& getLinkObject(LinkId_t id);
 
-    char* makePythonSafeWithPrefix(const std::string name, const std::string prefix) const;
+    char* makePythonSafeWithPrefix(const std::string& name, const std::string& prefix) const;
     void makeBufferPythonSafe(char* buffer) const;
-    char* makeEscapeSafe(const std::string input) const;
+    char* makeEscapeSafe(const std::string& input) const;
     bool strncmp(const char* a, const char* b, const size_t n) const;
     bool isMultiLine(const char* check) const;
-    bool isMultiLine(const std::string check) const;
+    bool isMultiLine(const std::string& check) const;
 
 private:
     ConfigGraph *graph;

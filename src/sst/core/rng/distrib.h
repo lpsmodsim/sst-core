@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -23,22 +23,22 @@ namespace RNG {
  */
 class SSTRandomDistribution {
 
-	public:
-		/**
-			Obtains the next double from the distribution
-			\return The next double in the distribution being sampled
-		*/
-		virtual double getNextDouble() = 0;
+    public:
+        /**
+            Obtains the next double from the distribution
+            \return The next double in the distribution being sampled
+        */
+        virtual double getNextDouble() = 0;
 
-		/** 
-			Destroys the distribution
-		*/
-		virtual ~SSTRandomDistribution() {};
+        /**
+            Destroys the distribution
+        */
+        virtual ~SSTRandomDistribution() {};
 
-		/**
-			Creates the base (abstract) class of a distribution
-		*/
-		SSTRandomDistribution() {};
+        /**
+            Creates the base (abstract) class of a distribution
+        */
+        SSTRandomDistribution() {};
 
 };
 

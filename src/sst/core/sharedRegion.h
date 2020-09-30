@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -12,7 +12,7 @@
 #ifndef SST_CORE_CORE_SHAREDREGION_H
 #define SST_CORE_CORE_SHAREDREGION_H
 
-#include <sst/core/sst_types.h>
+#include "sst/core/sst_types.h"
 
 #include <string>
 #include <vector>
@@ -51,8 +51,8 @@ public:
     bool merge(uint8_t *target, const uint8_t *newData, size_t size) override;
 
     bool merge(uint8_t *target, size_t size, const std::vector<ChangeSet> &changeSets) override {
-			return SharedRegionMerger::merge(target,size,changeSets);
-		}
+        return SharedRegionMerger::merge(target,size,changeSets);
+    }
 
 };
 
@@ -66,8 +66,8 @@ protected:
     virtual const void* getConstPtr(const SharedRegion* sr) const = 0;
 
 public:
-    virtual SharedRegion* getLocalSharedRegion(const std::string &key, size_t size, uint8_t initByte = 0) = 0;
-    virtual SharedRegion* getGlobalSharedRegion(const std::string &key, size_t size, SharedRegionMerger *merger = NULL, uint8_t initByte = 0) = 0;
+    virtual SharedRegion* getLocalSharedRegion(const std::string& key, size_t size, uint8_t initByte = 0) = 0;
+    virtual SharedRegion* getGlobalSharedRegion(const std::string& key, size_t size, SharedRegionMerger *merger = nullptr, uint8_t initByte = 0) = 0;
 
     virtual void publishRegion(SharedRegion*) = 0;
     virtual bool isRegionReady(const SharedRegion*) = 0;
@@ -85,8 +85,9 @@ private:
     size_t size;
 
 protected:
-    SharedRegion(SharedRegionManager *manager, size_t id,
-            size_t size) : manager(manager), id(id),
+    SharedRegion(SharedRegionManager *manager, size_t id, size_t size) :
+        manager(manager),
+        id(id),
         size(size)
     { }
 

@@ -1,22 +1,21 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
 
 
 #include "sst_config.h"
-#include <sst/core/serialization/serializer.h>
-#include <sst/core/syncQueue.h>
+#include "sst/core/syncQueue.h"
 
-#include <sst/core/event.h>
-
-#include <sst/core/simulation.h>
+#include "sst/core/serialization/serializer.h"
+#include "sst/core/event.h"
+#include "sst/core/simulation.h"
 
 
 namespace SST {
@@ -25,19 +24,19 @@ using namespace Core::ThreadSafe;
 using namespace Core::Serialization;
 
 SyncQueue::SyncQueue() :
-    ActivityQueue(), buffer(NULL), buf_size(0)
+    ActivityQueue(), buffer(nullptr), buf_size(0)
 {
 }
 
 SyncQueue::~SyncQueue()
 {
 }
-    
+
 bool
 SyncQueue::empty()
 {
     std::lock_guard<Spinlock> lock(slock);
-	return activities.empty();
+    return activities.empty();
 }
 
 int
@@ -46,7 +45,7 @@ SyncQueue::size()
     std::lock_guard<Spinlock> lock(slock);
     return activities.size();
 }
-    
+
 void
 SyncQueue::insert(Activity* activity)
 {
@@ -58,19 +57,19 @@ Activity*
 SyncQueue::pop()
 {
     // NEED TO FATAL
-	// if ( data.size() == 0 ) return NULL;
-	// std::vector<Activity*>::iterator it = data.begin();
-	// Activity* ret_val = (*it);
-	// data.erase(it);
-	// return ret_val;
-    return NULL;
+    // if ( data.size() == 0 ) return nullptr;
+    // std::vector<Activity*>::iterator it = data.begin();
+    // Activity* ret_val = (*it);
+    // data.erase(it);
+    // return ret_val;
+    return nullptr;
 }
 
 Activity*
 SyncQueue::front()
 {
     // NEED TO FATAL
-	return NULL;
+    return nullptr;
 }
 
 void
@@ -94,14 +93,14 @@ SyncQueue::getData()
     size_t size = ser.size();
 
     if ( buf_size < ( size + sizeof(SyncQueue::Header) ) ) {
-        if ( buffer != NULL ) {
+        if ( buffer != nullptr ) {
             delete[] buffer;
         }
-        
+
         buf_size = size + sizeof(SyncQueue::Header);
         buffer = new char[buf_size];
     }
-        
+
     ser.start_packing(buffer + sizeof(SyncQueue::Header), size);
 
     ser & activities;
@@ -114,7 +113,7 @@ SyncQueue::getData()
 
     // Set the size field in the header
     static_cast<SyncQueue::Header*>(static_cast<void*>(buffer))->buffer_size = size + sizeof(SyncQueue::Header);
-    
+
     return buffer;
 }
 

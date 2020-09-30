@@ -1,9 +1,9 @@
 // -*- mode: c++ -*-
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -11,19 +11,19 @@
 // distribution.
 //
 
-#ifndef CORE_INTERFACES_SIMPLEMEM_H_
-#define CORE_INTERFACES_SIMPLEMEM_H_
+#ifndef SST_CORE_INTERFACES_SIMPLEMEM_H_
+#define SST_CORE_INTERFACES_SIMPLEMEM_H_
 
 #include <string>
 #include <utility>
 #include <map>
 #include <atomic>
 
-#include <sst/core/sst_types.h>
-#include <sst/core/warnmacros.h>
-#include <sst/core/subcomponent.h>
-#include <sst/core/params.h>
-#include <sst/core/link.h>
+#include "sst/core/sst_types.h"
+#include "sst/core/warnmacros.h"
+#include "sst/core/subcomponent.h"
+#include "sst/core/params.h"
+#include "sst/core/link.h"
 
 namespace SST {
 
@@ -38,7 +38,7 @@ namespace Interfaces {
  */
 class SimpleMem : public SubComponent {
 
-    
+
 public:
     class HandlerBase;
 
@@ -65,6 +65,7 @@ public:
             FlushLine,      /*!< Cache flush request - writeback specified line throughout memory system */
             FlushLineInv,   /*!< Cache flush request - writeback and invalidate specified line throughout memory system */
             FlushLineResp,  /*!< Response to FlushLine; flag F_FLUSH_SUCCESS indicates success or failure */
+            Inv,            /*!< Notification of L1 cache invalidation to core */
             TxBegin,        /*!< Start a new transaction */
             TxEnd,          /*!< End the current lowest transaction */
             TxResp,
@@ -310,11 +311,6 @@ public:
     };
 
 
-    /** Constructor, designed to be used via 'loadSubComponent'. */
-    SimpleMem(SST::Component *comp, Params &UNUSED(params)) :
-        SubComponent(comp)
-        { }
-
     /** Constructor, designed to be used via 'loadUserSubComponent and loadAnonymousSubComponent'. */
     SimpleMem(SST::ComponentId_t id, Params &UNUSED(params)) :
         SubComponent(id)
@@ -324,7 +320,7 @@ public:
      * Initialize with link name name, and handler, if any
      * @return true if the link was able to be configured.
      */
-    virtual bool initialize(const std::string &linkName, HandlerBase *handler = NULL) = 0;
+    virtual bool initialize(const std::string& linkName, HandlerBase *handler = nullptr) = 0;
 
     /**
      * Sends a memory-based request during the init() phase
@@ -360,7 +356,7 @@ public:
      * Use this method for polling-based applications.
      * Register a handler for push-based notification of responses.
      *
-     * @return NULL if nothing is available.
+     * @return nullptr if nothing is available.
      * @return Pointer to a Request response (that should be deleted)
      */
     virtual Request* recvResponse(void) = 0;

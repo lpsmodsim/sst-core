@@ -1,10 +1,10 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
-// 
-// Copyright (c) 2009-2019, NTESS
+//
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
-// 
+//
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
@@ -12,10 +12,9 @@
 #ifndef SERIALIZE_ACCESSOR_H
 #define SERIALIZE_ACCESSOR_H
 
-#include <sst/core/warnmacros.h>
+#include "sst/core/warnmacros.h"
 #include <cstring>
 #include <exception>
-//#include <sst/core/serialization/errors.h>
 
 namespace SST {
 namespace Core {
@@ -72,7 +71,7 @@ class ser_buffer_accessor {
 
   void
   clear(){
-    bufstart_ = bufptr_ = 0;
+    bufstart_ = bufptr_ = nullptr;
     max_size_ = size_ = 0;
   }
 
@@ -84,8 +83,8 @@ class ser_buffer_accessor {
 
  protected:
   ser_buffer_accessor() :
-    bufstart_(0),
-    bufptr_(0),
+    bufstart_(nullptr),
+    bufptr_(nullptr),
     size_(0)
   {
   }

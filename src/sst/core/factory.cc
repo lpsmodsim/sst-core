@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -11,45 +11,46 @@
 
 
 #include "sst_config.h"
-#include <sst/core/warnmacros.h>
+#include "sst/core/warnmacros.h"
 #include "sst/core/factory.h"
 
 #include <set>
 #include <tuple>
 #include <stdio.h>
+#include <fstream>
 
-#include <sst/core/elemLoader.h>
+#include "sst/core/elemLoader.h"
 #include "sst/core/simulation.h"
 #include "sst/core/component.h"
 #include "sst/core/subcomponent.h"
 #include "sst/core/part/sstpart.h"
-#include <sst/core/eli/elementinfo.h>
+#include "sst/core/eli/elementinfo.h"
 #include "sst/core/params.h"
 #include "sst/core/linkMap.h"
-#include <sst/core/model/element_python.h>
+#include "sst/core/model/element_python.h"
 
 // Statistic Output Objects
-#include <sst/core/statapi/statoutputconsole.h>
-#include <sst/core/statapi/statoutputtxt.h>
-#include <sst/core/statapi/statoutputcsv.h>
-#include <sst/core/statapi/statoutputjson.h>
+#include "sst/core/statapi/statoutputconsole.h"
+#include "sst/core/statapi/statoutputtxt.h"
+#include "sst/core/statapi/statoutputcsv.h"
+#include "sst/core/statapi/statoutputjson.h"
 #ifdef HAVE_HDF5
-#include <sst/core/statapi/statoutputhdf5.h>
+#include "sst/core/statapi/statoutputhdf5.h"
 #endif
-#include <sst/core/statapi/statbase.h>
-#include <sst/core/statapi/stataccumulator.h>
-#include <sst/core/statapi/stathistogram.h>
-#include <sst/core/statapi/statnull.h>
-#include <sst/core/statapi/statuniquecount.h>
+#include "sst/core/statapi/statbase.h"
+#include "sst/core/statapi/stataccumulator.h"
+#include "sst/core/statapi/stathistogram.h"
+#include "sst/core/statapi/statnull.h"
+#include "sst/core/statapi/statuniquecount.h"
 
 using namespace SST::Statistics;
 
 namespace SST {
 
-Factory* Factory::instance = NULL;
+Factory* Factory::instance = nullptr;
 
 
-Factory::Factory(std::string searchPaths) :
+Factory::Factory(const std::string& searchPaths) :
     searchPaths(searchPaths),
     out(Output::getDefaultObject())
 {
@@ -67,7 +68,7 @@ Factory::~Factory()
 
 
 
-static bool checkPort(const std::string &def, const std::string &offered)
+static bool checkPort(const std::string& def, const std::string& offered)
 {
     const char * x = def.c_str();
     const char * y = offered.c_str();
@@ -94,11 +95,11 @@ static bool checkPort(const std::string &def, const std::string &offered)
         x++;
         y++;
     } while ( *x && *y );
-    if ( *x != *y ) return false; // aka, both NULL
+    if ( *x != *y ) return false; // aka, both nullptr
     return true;
 }
 
-bool Factory::isPortNameValid(const std::string &type, const std::string port_name)
+bool Factory::isPortNameValid(const std::string& type, const std::string& port_name)
 {
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(type);
@@ -107,37 +108,38 @@ bool Factory::isPortNameValid(const std::string &type, const std::string port_na
         findLibrary(elemlib);
     }
 
-    const std::vector<std::string> *portNames = NULL;
+    const std::vector<std::string> *portNames = nullptr;
 
     // Check to see if library is loaded into new
     // ElementLibraryDatabase
     auto* lib = ELI::InfoDatabase::getLibrary<Component>(elemlib);
     std::stringstream err;
     if (lib) {
-      auto* compInfo = lib->getInfo(elem);
-      if (compInfo){
-        portNames = &compInfo->getPortnames();
-      }
-    } else {
-      auto* lib = ELI::InfoDatabase::getLibrary<SubComponent>(elemlib);
-      if (lib){
-        auto* subcompInfo = lib->getInfo(elemlib);
-        if (subcompInfo){
-          portNames = &subcompInfo->getPortnames();
-        } else {
-          //this is going to fail
-          err << "Valid SubComponents: ";
-          for (auto& pair : lib->getMap()){
-            err << pair.first << "\n";
-          }
+        auto* compInfo = lib->getInfo(elem);
+        if (compInfo){
+            portNames = &compInfo->getPortnames();
         }
-      }
+    }
+    if ( nullptr == portNames ) {
+        auto* lib = ELI::InfoDatabase::getLibrary<SubComponent>(elemlib);
+        if (lib){
+            auto* subcompInfo = lib->getInfo(elem);
+            if (subcompInfo){
+                portNames = &subcompInfo->getPortnames();
+            } else {
+                //this is going to fail
+                err << "Valid SubComponents: ";
+                for (auto& pair : lib->getMap()){
+                    err << pair.first << "\n";
+                }
+            }
+        }
     }
 
-    
+
     std::string tmp = elemlib + "." + elem;
 
-    if (portNames == NULL) {
+    if (portNames == nullptr) {
       err << "Valid Components: ";
       for (auto& pair : lib->getMap()){
         err << pair.first << "\n";
@@ -155,7 +157,7 @@ bool Factory::isPortNameValid(const std::string &type, const std::string port_na
 }
 
 const Params::KeySet_t&
-Factory::getParamNames(const std::string &type)
+Factory::getParamNames(const std::string& type)
 {
     // This is only needed so we can return something in the error
     // case.  It is never used.
@@ -167,7 +169,7 @@ Factory::getParamNames(const std::string &type)
     if (loaded_libraries.find(elemlib) == loaded_libraries.end()) {
         findLibrary(elemlib);
     }
-    
+
     // Check to see if library is loaded into new
     // ElementLibraryDatabase
     auto* lib = ELI::InfoDatabase::getLibrary<Component>(elemlib);
@@ -198,16 +200,17 @@ Factory::getParamNames(const std::string &type)
 
 
 Component*
-Factory::CreateComponent(ComponentId_t id, 
-                         std::string &type, 
+Factory::CreateComponent(ComponentId_t id,
+                         const std::string& type,
                          Params& params)
 {
     std::string elemlib, elem;
-    
+
     std::tie(elemlib, elem) = parseLoadName(type);
 
     // ensure library is already loaded...
-    requireLibrary(elemlib);
+    std::stringstream sstr;
+    requireLibrary(elemlib, sstr);
 
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
     // Check to see if library is loaded into new
@@ -232,8 +235,9 @@ Factory::CreateComponent(ComponentId_t id,
       }
     }
     // If we make it to here, component not found
-    out.fatal(CALL_INFO, 1, "can't find requested component '%s'\n ", type.c_str());
-    return NULL;
+    out.fatal(CALL_INFO, 1, "can't find requested component '%s'\n%s\n",
+              type.c_str(), sstr.str().c_str());
+    return nullptr;
 }
 
 
@@ -241,12 +245,13 @@ bool
 Factory::DoesSubComponentSlotExist(const std::string& type, const std::string& slotName)
 {
     std::string compTypeToLoad = type;
-    
+
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(compTypeToLoad);
 
     // ensure library is already loaded...
-    requireLibrary(elemlib);
+    std::stringstream error_os;
+    requireLibrary(elemlib, error_os);
 
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
 
@@ -274,23 +279,25 @@ Factory::DoesSubComponentSlotExist(const std::string& type, const std::string& s
     }
 
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested component/subcomponent '%s'\n ", type.c_str());
+    out.fatal(CALL_INFO, 1, "can't find requested component/subcomponent '%s'\n%s\n",
+              type.c_str(), error_os.str().c_str());
     return false;
 }
 
-bool 
+bool
 Factory::DoesComponentInfoStatisticNameExist(const std::string& type, const std::string& statisticName)
 {
     std::string compTypeToLoad = type;
-    if (true == type.empty()) { 
+    if (true == type.empty()) {
         compTypeToLoad = loadingComponentType;
     }
-    
+
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(compTypeToLoad);
 
     // ensure library is already loaded...
-    requireLibrary(elemlib);
+    std::stringstream error_os;
+    requireLibrary(elemlib, error_os);
 
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
 
@@ -321,26 +328,28 @@ Factory::DoesComponentInfoStatisticNameExist(const std::string& type, const std:
             return false;
         }
     }
-    
+
 
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested subcomponent '%s'\n ", type.c_str());
+    out.fatal(CALL_INFO, 1, "can't find requested subcomponent '%s'\n%s\n",
+              type.c_str(), error_os.str().c_str());
     return false;
 }
 
-uint8_t 
+uint8_t
 Factory::GetComponentInfoStatisticEnableLevel(const std::string& type, const std::string& statisticName)
 {
     std::string compTypeToLoad = type;
-    if (true == type.empty()) { 
+    if (true == type.empty()) {
         compTypeToLoad = loadingComponentType;
     }
-    
+
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(compTypeToLoad);
 
     // ensure library is already loaded...
-    requireLibrary(elemlib);
+    std::stringstream error_os;
+    requireLibrary(elemlib, error_os);
 
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
 
@@ -373,24 +382,26 @@ Factory::GetComponentInfoStatisticEnableLevel(const std::string& type, const std
     }
 
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested component '%s'\n ", type.c_str());
+    out.fatal(CALL_INFO, 1, "can't find requested component '%s'\n%s\n",
+              type.c_str(), error_os.str().c_str());
     return 0;
 }
 
-std::string 
+std::string
 Factory::GetComponentInfoStatisticUnits(const std::string& type, const std::string& statisticName)
 {
     std::string compTypeToLoad = type;
-    if (true == type.empty()) { 
+    if (true == type.empty()) {
         compTypeToLoad = loadingComponentType;
     }
-    
+
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(compTypeToLoad);
 
     // ensure library is already loaded...
+    std::stringstream error_os;
     if (loaded_libraries.find(elemlib) == loaded_libraries.end()) {
-        findLibrary(elemlib);
+        findLibrary(elemlib, error_os);
     }
 
     auto* compLib = ELI::InfoDatabase::getLibrary<Component>(elemlib);
@@ -403,17 +414,18 @@ Factory::GetComponentInfoStatisticUnits(const std::string& type, const std::stri
             }
         }
       }
-      return 0;
+      return nullptr;
     }
 
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested component '%s'\n ", type.c_str());
-    return 0;
+    out.fatal(CALL_INFO, 1, "can't find requested component '%s'\n%s\n",
+              type.c_str(), error_os.str().c_str());
+    return nullptr;
 }
 
 
 Module*
-Factory::CreateModule(std::string type, Params& params)
+Factory::CreateModule(const std::string& type, Params& params)
 {
     if("" == type) {
         Simulation::getSimulation()->getSimulationOutput().fatal(CALL_INFO,
@@ -423,7 +435,8 @@ Factory::CreateModule(std::string type, Params& params)
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(type);
 
-    requireLibrary(elemlib);
+    std::stringstream error_os;
+    requireLibrary(elemlib, error_os);
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
 
     // Check to see if library is loaded into new
@@ -444,20 +457,22 @@ Factory::CreateModule(std::string type, Params& params)
         }
       }
     }
-    
+
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested module '%s'\n ", type.c_str());
-    return NULL;
+    out.fatal(CALL_INFO, 1, "can't find requested module '%s'\n%s\n",
+              type.c_str(), error_os.str().c_str());
+    return nullptr;
 }
 
 Module*
-Factory::CreateModuleWithComponent(std::string type, Component* comp, Params& params)
+Factory::CreateModuleWithComponent(const std::string& type, Component* comp, Params& params)
 {
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(type);
 
     // ensure library is already loaded...
-    requireLibrary(elemlib);
+    std::stringstream error_os;
+    requireLibrary(elemlib, error_os);
 
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
 
@@ -481,47 +496,14 @@ Factory::CreateModuleWithComponent(std::string type, Component* comp, Params& pa
     }
 
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested module '%s'\n ", type.c_str());
-    return NULL;
-}
-
-SubComponent*
-Factory::CreateSubComponent(std::string type, Component* comp, Params& params)
-{
-    std::string elemlib, elem;
-    std::tie(elemlib, elem) = parseLoadName(type);
-
-    // ensure library is already loaded...
-    requireLibrary(elemlib);
-
-    std::lock_guard<std::recursive_mutex> lock(factoryMutex);
-    // Check to see if library is loaded into new
-    // ElementLibraryDatabase
-    auto* lib = ELI::InfoDatabase::getLibrary<SubComponent>(elemlib);
-    if (lib){
-      auto* info = lib->getInfo(elem);
-      if (info){
-        auto* builderLib = SubComponent::getBuilderLibrary(elemlib);
-        if (builderLib){
-          auto* fact = builderLib->getBuilder(elem);
-          if (fact){
-            params.pushAllowedKeys(info->getParamNames());
-            SubComponent* ret = fact->create(comp,params);
-            params.popAllowedKeys();
-            return ret;
-          }
-        }
-      }
-    }
-
-    // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "can't find requested subcomponent '%s'\n ", type.c_str());
-    return NULL;
+    out.fatal(CALL_INFO, 1, "can't find requested module '%s'\n%s\n",
+              type.c_str(), error_os.str().c_str());
+    return nullptr;
 }
 
 
 bool
-Factory::doesSubComponentExist(std::string type)
+Factory::doesSubComponentExist(const std::string& type)
 {
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(type);
@@ -543,7 +525,7 @@ Factory::doesSubComponentExist(std::string type)
 }
 
 void
-Factory::RequireEvent(std::string eventname)
+Factory::RequireEvent(const std::string& eventname)
 {
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(eventname);
@@ -554,13 +536,14 @@ Factory::RequireEvent(std::string eventname)
 }
 
 Partition::SSTPartitioner*
-Factory::CreatePartitioner(std::string name, RankInfo total_ranks, RankInfo my_rank, int verbosity)
+Factory::CreatePartitioner(const std::string& name, RankInfo total_ranks, RankInfo my_rank, int verbosity)
 {
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(name);
 
     // ensure library is already loaded...
-    requireLibrary(elemlib);
+    std::stringstream error_os;
+    requireLibrary(elemlib, error_os);
 
     // Check to see if library is loaded into new
     // ElementLibraryDatabase
@@ -579,14 +562,16 @@ Factory::CreatePartitioner(std::string name, RankInfo total_ranks, RankInfo my_r
     }
 
     // If we get to here, element doesn't exist
-    out.fatal(CALL_INFO, 1, "Error: Unable to find requested partitioner '%s', check --help for information on partitioners.\n ", name.c_str());
-    return NULL;
+    out.fatal(CALL_INFO, 1,
+              "Error: Unable to find requested partitioner '%s', check --help for information on partitioners.\n%s\n",
+              name.c_str(), error_os.str().c_str());
+    return nullptr;
 }
 
 
 // genPythonModuleFunction
 SSTElementPythonModule*
-Factory::getPythonModule(std::string name)
+Factory::getPythonModule(const std::string& name)
 {
     std::string elemlib, elem;
     std::tie(elemlib, elem) = parseLoadName(name);
@@ -608,21 +593,33 @@ Factory::getPythonModule(std::string name)
       }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
 
-bool Factory::hasLibrary(std::string elemlib)
+bool Factory::hasLibrary(const std::string& elemlib, std::ostream& error_os)
 {
-    return findLibrary(elemlib, false);
+    return findLibrary(elemlib, error_os);
 }
 
 
-void Factory::requireLibrary(std::string &elemlib)
+void Factory::requireLibrary(const std::string& elemlib)
 {
     if ( elemlib == "sst" ) return;
-    findLibrary(elemlib, true);
+
+    //ignore error messages here
+    std::ofstream ofs("/dev/null", std::ofstream::out | std::ofstream::app);
+    requireLibrary(elemlib, ofs);
+}
+
+void Factory::requireLibrary(const std::string& elemlib, std::ostream& error_os)
+{
+    if ( elemlib == "sst" ) return;
+
+    //ignore error messages here
+    //std::ofstream ofs("/dev/null", std::ofstream::out | std::ofstream::app);
+    findLibrary(elemlib, error_os);
 }
 
 
@@ -632,7 +629,7 @@ void Factory::getLoadedLibraryNames(std::set<std::string>& lib_names)
     for ( auto& lib : loaded_libraries ) {
         lib_names.insert(lib);
     }
-    
+
 }
 
 void Factory::loadUnloadedLibraries(const std::set<std::string>& lib_names)
@@ -643,16 +640,16 @@ void Factory::loadUnloadedLibraries(const std::set<std::string>& lib_names)
             findLibrary(*i);
         }
 }
-    
+
 
 bool
-Factory::findLibrary(std::string elemlib, bool showErrors)
+Factory::findLibrary(const std::string& elemlib, std::ostream& err_os)
 {
 
     std::lock_guard<std::recursive_mutex> lock(factoryMutex);
     if ( loaded_libraries.count(elemlib) == 1 ) return true;
 
-    return loadLibrary(elemlib, showErrors);
+    return loadLibrary(elemlib, err_os);
 }
 
 
@@ -675,16 +672,17 @@ Factory::parseLoadName(const std::string& wholename)
 }
 
 void
-Factory::notFound(const std::string &baseName, const std::string &type)
+Factory::notFound(const std::string& baseName, const std::string& type,
+                  const std::string& error_msg)
 {
-    out.fatal(CALL_INFO, 1, "can't find requested element library '%s' with element type '%s'\n ",
-            baseName.c_str(), type.c_str());
+    out.fatal(CALL_INFO, 1, "can't find requested element library '%s' with element type '%s'\n%s\n",
+            baseName.c_str(), type.c_str(), error_msg.c_str());
 }
 
 
-bool Factory::loadLibrary(std::string name, bool showErrors)
+bool Factory::loadLibrary(const std::string& name, std::ostream& err_os)
 {
-    loader->loadLibrary(name, showErrors);
+    loader->loadLibrary(name, err_os);
 
     if (!ELI::LoadedLibraries::isLoaded(name)) {
         return false;

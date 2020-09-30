@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -14,8 +14,8 @@
 
 #include "sst/core/sst_types.h"
 
-#include <sst/core/statapi/statoutput.h>
-#include <sst/core/warnmacros.h>
+#include "sst/core/statapi/statoutput.h"
+#include "sst/core/warnmacros.h"
 
 DISABLE_WARN_MISSING_OVERRIDE
 #include "H5Cpp.h"
@@ -30,9 +30,9 @@ namespace Statistics {
 /**
     \class StatisticOutputHDF5
 
-	The class for statistics output to a comma separated file.
+    The class for statistics output to a comma separated file.
 */
-class StatisticOutputHDF5 : public StatisticOutput
+class StatisticOutputHDF5 : public StatisticFieldsOutput
 {
 public:
     SST_ELI_REGISTER_DERIVED(
@@ -49,7 +49,7 @@ public:
     StatisticOutputHDF5(Params& outputParameters);
 
     bool acceptsGroups() const override { return true; }
-protected:
+private:
     /** Perform a check of provided parameters
      * @return True if all required parameters and options are acceptable
      */
@@ -58,12 +58,12 @@ protected:
     /** Print out usage for this Statistic Output */
     void printUsage() override;
 
-    void implStartRegisterFields(StatisticBase *stat) override;
+    void startRegisterFields(StatisticBase *stat) override;
     void implRegisteredField(fieldHandle_t fieldHandle) override;
-    void implStopRegisterFields() override;
+    void stopRegisterFields() override;
 
-    void implStartRegisterGroup(StatisticGroup* group ) override;
-    void implStopRegisterGroup() override;
+    void startRegisterGroup(StatisticGroup* group ) override;
+    void stopRegisterGroup() override;
 
     /** Indicate to Statistic Output that simulation started.
      *  Statistic output may perform any startup code here as necessary.
@@ -90,8 +90,8 @@ protected:
      */
     void implStopOutputEntries() override;
 
-    void implStartOutputGroup(StatisticGroup* group) override;
-    void implStopOutputGroup() override;
+    void startOutputGroup(StatisticGroup* group) override;
+    void stopOutputGroup() override;
 
     /** Implementation functions for output.
      * These will be called by the statistic to provide Statistic defined
@@ -237,7 +237,7 @@ private:
         void finishGroupEntry() override;
         size_t getNumComponents() const { return m_components.size(); }
 
-        const std::string& getName() const { return m_statGroup->name; }
+        const std::string& getName() const;
     };
 
 

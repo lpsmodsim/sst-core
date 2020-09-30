@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -13,20 +13,20 @@
 #ifndef _H_SST_CORE_CONFIG_OUTPUT_DOT
 #define _H_SST_CORE_CONFIG_OUTPUT_DOT
 
-#include <sst/core/configGraph.h>
-#include <sst/core/configGraphOutput.h>
+#include "sst/core/configGraph.h"
+#include "sst/core/configGraphOutput.h"
 
 namespace SST {
 namespace Core {
 
 class DotConfigGraphOutput : public ConfigGraphOutput {
 public:
-	DotConfigGraphOutput(const char* path);
-	virtual void generate(const Config* cfg, ConfigGraph* graph) override;
+    DotConfigGraphOutput(const char* path);
+    virtual void generate(const Config* cfg, ConfigGraph* graph) override;
 
 protected:
-	void generateDot(const ConfigComponent& comp, const ConfigLinkMap_t& linkMap) const;
-	void generateDot(const ConfigLink& link) const;
+    void generateDot(const ConfigComponent& comp, const ConfigLinkMap_t& linkMap) const;
+    void generateDot(const ConfigLink& link) const;
 };
 
 }

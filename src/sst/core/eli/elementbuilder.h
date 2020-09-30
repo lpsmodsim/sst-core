@@ -1,8 +1,18 @@
+// Copyright 2009-2020 NTESS. Under the terms
+// of Contract DE-NA0003525 with NTESS, the U.S.
+// Government retains certain rights in this software.
+//
+// Copyright (c) 2009-2020, NTESS
+// All rights reserved.
+//
+// This file is part of the SST software package. For license
+// information, see the LICENSE file in the top level directory of the
+// distribution.
 
 #ifndef SST_CORE_FACTORY_INFO_H
 #define SST_CORE_FACTORY_INFO_H
 
-#include <sst/core/eli/elibase.h>
+#include "sst/core/eli/elibase.h"
 #include <type_traits>
 
 namespace SST {
@@ -30,7 +40,7 @@ class BuilderLibrary
   {
   }
 
-  BaseBuilder* getBuilder(const std::string &name) {
+  BaseBuilder* getBuilder(const std::string& name) {
     auto iter = factories_.find(name);
     if (iter == factories_.end()){
       return nullptr;
@@ -95,11 +105,31 @@ class BuilderLibraryDatabase {
 template <class Base, class... CtorArgs> typename BuilderLibraryDatabase<Base,CtorArgs...>::Map*
   BuilderLibraryDatabase<Base,CtorArgs...>::libraries = nullptr;
 
+template <class Base, class Builder, class... CtorArgs>
+struct BuilderLoader : public LibraryLoader {
+  BuilderLoader(const std::string& elemlib,
+                const std::string& elem,
+                Builder* builder) :
+    elemlib_(elemlib), elem_(elem), builder_(builder)
+  {
+  }
+
+  void load() override {
+    BuilderLibraryDatabase<Base,CtorArgs...>::getLibrary(elemlib_)
+        ->readdBuilder(elem_,builder_);
+  }
+
+ private:
+  std::string elemlib_;
+  std::string elem_;
+  Builder* builder_;
+};
+
 template <class Base, class... CtorArgs>
-bool BuilderLibrary<Base,CtorArgs...>::addLoader(const std::string &elemlib, const std::string &elem, BaseBuilder *fact){
-  return ELI::LoadedLibraries::addLoader(elemlib, elem, [=]{
-      BuilderLibraryDatabase<Base,CtorArgs...>::getLibrary(elemlib)->readdBuilder(elem,fact);
-  });
+bool BuilderLibrary<Base,CtorArgs...>::addLoader(const std::string& elemlib, const std::string& elem,
+                                                 BaseBuilder *fact){
+  auto loader = new BuilderLoader<Base,BaseBuilder,CtorArgs...>(elemlib, elem, fact);
+  return ELI::LoadedLibraries::addLoader(elemlib, elem, loader);
 }
 
 template <class Base, class T>
@@ -180,12 +210,36 @@ struct ElementsBuilder<Base, std::tuple<Args...>>
 
 };
 
+
+/**
+ @class ExtendedCtor
+ Implements a constructor for a derived base as usually happens with subcomponents, e.g.
+ class U extends API extends Subcomponent. You can construct U as either an API*
+ or a Subcomponent* depending on usage.
+*/
 template <class NewCtor, class OldCtor>
 struct ExtendedCtor
 {
-  template <class T> static bool add(){
+  template <class T>
+  using is_constructible = typename NewCtor::template is_constructible<T>;
+
+  /**
+    The derived Ctor can "block" the more abstract Ctor, meaning an object
+    should only be instantiated as the most derived type. enable_if here
+    checks if both the derived API and the parent API are still valid
+  */
+  template <class T>
+  static typename std::enable_if<OldCtor::template is_constructible<T>::value,bool>::type
+  add(){
       //if abstract, force an allocation to generate meaningful errors
     return NewCtor::template add<T>() && OldCtor::template add<T>();
+  }
+
+  template <class T>
+  static typename std::enable_if<!OldCtor::template is_constructible<T>::value,bool>::type
+  add(){
+      //if abstract, force an allocation to generate meaningful errors
+    return NewCtor::template add<T>();
   }
 
   template <class __NewCtor>
@@ -198,6 +252,9 @@ struct ExtendedCtor
 template <class Base, class... Args>
 struct SingleCtor
 {
+  template <class T>
+  using is_constructible = std::is_constructible<T,Args...>;
+
   template <class T> static bool add(){
     //if abstract, force an allocation to generate meaningful errors
     auto* fact = new DerivedBuilder<T,Base,Args...>;
@@ -211,10 +268,15 @@ struct SingleCtor
   using ExtendCtor = ExtendedCtor<NewCtor, SingleCtor<Base,Args...>>;
 };
 
-
 template <class Base, class Ctor, class... Ctors>
 struct CtorList : public CtorList<Base,Ctors...>
 {
+  template <class T>  //if T is constructible with Ctor arguments
+  using is_constructible = typename std::conditional<is_tuple_constructible<T,Ctor>::value,
+                 std::true_type, //yes, constructible
+                 typename CtorList<Base,Ctors...>::template is_constructible<T> //not constructible here but maybe later
+               >::type;
+
   template <class T, int NumValid=0, class U=T>
   static typename std::enable_if<std::is_abstract<U>::value || is_tuple_constructible<U,Ctor>::value, bool>::type
   add(){
@@ -244,6 +306,9 @@ template <> class NoValidConstructorsForDerivedType<0> {};
 
 template <class Base> struct CtorList<Base,void>
 {
+  template <class T>
+  using is_constructible = std::false_type;
+
   template <class T,int numValidCtors>
   static bool add(){
     return NoValidConstructorsForDerivedType<numValidCtors>::atLeastOneValidCtor;
@@ -278,14 +343,14 @@ template <class Base> struct CtorList<Base,void>
 #define SST_ELI_DECLARE_CTORS_EXTERN(...) \
   SST_ELI_CTORS_COMMON(ELI_FORWARD_AS_ONE(__VA_ARGS__))
 
-//VA_ARGS here 
+//VA_ARGS here
 // 0) Base name
 // 1) List of ctor args
 #define SST_ELI_BUILDER_TYPEDEFS(...) \
   using BaseBuilder = ::SST::ELI::Builder<__VA_ARGS__>; \
   using BuilderLibrary = ::SST::ELI::BuilderLibrary<__VA_ARGS__>; \
   using BuilderLibraryDatabase = ::SST::ELI::BuilderLibraryDatabase<__VA_ARGS__>; \
-  template <class __TT> using DerivedBuilder = ::SST::ELI::DerivedBuilder<__TT,__VA_ARGS__>; 
+  template <class __TT> using DerivedBuilder = ::SST::ELI::DerivedBuilder<__TT,__VA_ARGS__>;
 
 #define SST_ELI_BUILDER_FXNS() \
   static BuilderLibrary* getBuilderLibrary(const std::string& name){ \
@@ -322,7 +387,7 @@ template <class Base> struct CtorList<Base,void>
 #define SST_ELI_DECLARE_DEFAULT_CTOR() \
   using Ctor = ::SST::ELI::SingleCtor<__LocalEliBase>; \
   SST_ELI_BUILDER_TYPEDEFS(__LocalEliBase) \
-  SST_ELI_BUILDER_FXNS() 
+  SST_ELI_BUILDER_FXNS()
 
 #define SST_ELI_DECLARE_DEFAULT_CTOR_EXTERN() \
   SST_ELI_DEFAULT_CTOR_COMMON() \

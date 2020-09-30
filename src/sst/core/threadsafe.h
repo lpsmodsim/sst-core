@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -13,8 +13,13 @@
 #define SST_CORE_CORE_THREADSAFE_H
 
 #if ( defined( __amd64 ) || defined( __amd64__ ) || \
-        defined( __x86_64 ) || defined( __x86_64__ ) )
+      defined( __x86_64 ) || defined( __x86_64__ ) )
 #include <x86intrin.h>
+#define sst_pause() _mm_pause()
+#elif ( defined(__arm__) || defined(__arm) || defined(__aarch64__) )
+#define sst_pause() __asm__ __volatile__ ("yield")
+#elif defined(__PPC64__)
+#define sst_pause() __asm__ __volatile__ ( "or 27, 27, 27" ::: "memory" );
 #endif
 
 #include <thread>
@@ -27,7 +32,7 @@
 
 #include <time.h>
 
-#include <sst/core/profile.h>
+#include "sst/core/profile.h"
 
 namespace SST {
 namespace Core {
@@ -91,19 +96,14 @@ public:
                 do {
                     count++;
                     if ( count < 1024 ) {
-#if ( defined( __amd64 ) || defined( __amd64__ ) || \
-        defined( __x86_64 ) || defined( __x86_64__ ) )
-                        _mm_pause();
-#elif defined(__PPC64__)
-       	asm volatile( "or 27, 27, 27" ::: "memory" );
-#endif
-		    } else if ( count < (1024*1024) ) {
+                        sst_pause();
+            } else if ( count < (1024*1024) ) {
                         std::this_thread::yield();
                     } else {
                         struct timespec ts;
                         ts.tv_sec = 0;
                         ts.tv_nsec = 1000;
-                        nanosleep(&ts, NULL);
+                        nanosleep(&ts, nullptr);
                     }
                 } while ( gen == generation.load(std::memory_order_acquire) );
             }
@@ -131,11 +131,8 @@ public:
 
     inline void lock() {
         while ( latch.test_and_set(std::memory_order_acquire) ) {
-#if ( defined( __amd64 ) || defined( __amd64__ ) || \
-        defined( __x86_64 ) || defined( __x86_64__ ) )
-                _mm_pause();
-#elif defined(__PPC64__)
-                asm volatile( "or 27, 27, 27" ::: "memory" );
+            sst_pause();
+#if defined(__PPC64__)
                 __sync_synchronize();
 #endif
         }
@@ -171,7 +168,7 @@ public:
     }
 
     BoundedQueue() : initialized(false) {}
-    
+
     void initialize(size_t maxSize) {
         if ( initialized ) return;
         dsize = maxSize;
@@ -201,7 +198,7 @@ public:
 
     bool try_insert(const T& arg)
     {
-        cell_t *cell = NULL;
+        cell_t *cell = nullptr;
         size_t pos = wPtr.load(std::memory_order_relaxed);
         for (;;) {
             cell = &data[pos % dsize];
@@ -224,7 +221,7 @@ public:
 
     bool try_remove(T &res)
     {
-        cell_t *cell = NULL;
+        cell_t *cell = nullptr;
         size_t pos = rPtr.load(std::memory_order_relaxed);
         for (;;) {
             cell = &data[pos % dsize];
@@ -250,12 +247,7 @@ public:
             if ( try_remove(res) ) {
                 return res;
             }
-#if ( defined( __amd64 ) || defined( __amd64__ ) || \
-        defined( __x86_64 ) || defined( __x86_64__ ) )
-            _mm_pause();
-#elif defined(__PPC64__)
-       	asm volatile( "or 27, 27, 27" ::: "memory" );
-#endif
+            sst_pause();
         }
     }
 };
@@ -315,12 +307,7 @@ public:
             if ( try_remove(res) ) {
                 return res;
             }
-#if ( defined( __amd64 ) || defined( __amd64__ ) || \
-        defined( __x86_64 ) || defined( __x86_64__ ) )
-            _mm_pause();
-#elif defined(__PPC64__)
-       	asm volatile( "or 27, 27, 27" ::: "memory" );
-#endif
+            sst_pause();
         }
     }
 

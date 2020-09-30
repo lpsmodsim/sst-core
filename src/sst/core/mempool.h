@@ -1,8 +1,8 @@
-// Copyright 2009-2019 NTESS. Under the terms
+// Copyright 2009-2020 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2019, NTESS
+// Copyright (c) 2009-2020, NTESS
 // All rights reserved.
 //
 // This file is part of the SST software package. For license
@@ -17,7 +17,6 @@
 
 #include <cstddef>
 #include <cstdlib>
-#include <cstring>
 #include <cinttypes>
 #include <cstdint>
 #include <sys/mman.h>
@@ -44,7 +43,7 @@ class MemPool
 
         inline void* try_remove() {
             std::lock_guard<LOCK_t> lock(mtx);
-            if ( list.empty() ) return NULL;
+            if ( list.empty() ) return nullptr;
             void *p = list.back();
             list.pop_back();
             return p;
@@ -59,7 +58,7 @@ public:
      * @param elementSize - Size of each Element
      * @param initialSize - Size of the memory pool (in bytes)
      */
-	MemPool(size_t elementSize, size_t initialSize=(2<<20)) :
+    MemPool(size_t elementSize, size_t initialSize=(2<<20)) :
         numAlloc(0), numFree(0),
         elemSize(elementSize), arenaSize(initialSize),
         allocating(false)
@@ -67,7 +66,7 @@ public:
         allocPool();
     }
 
-	~MemPool()
+    ~MemPool()
     {
         for ( std::list<uint8_t*>::iterator i = arenas.begin() ; i != arenas.end() ; ++i ) {
             ::free(*i);
@@ -75,18 +74,13 @@ public:
     }
 
     /** Allocate a new element from the memory pool */
-	inline void* malloc()
+    inline void* malloc()
     {
         void *ret = freeList.try_remove();
         while ( !ret ) {
             bool ok = allocPool();
-            if ( !ok ) return NULL;
-#if ( defined( __amd64 ) || defined( __amd64__ ) || \
-        defined( __x86_64 ) || defined( __x86_64__ ) )
-            _mm_pause();
-#elif defined(__PPC64__)
-       	    asm volatile( "or 27, 27, 27" ::: "memory" );
-#endif
+            if ( !ok ) return nullptr;
+            sst_pause();
             ret = freeList.try_remove();
         }
         ++numAlloc;
@@ -94,7 +88,7 @@ public:
     }
 
     /** Return an element to the memory pool */
-	inline void free(void *ptr)
+    inline void free(void *ptr)
     {
         // TODO:  Make sure this is in one of our arenas
         freeList.insert(ptr);
@@ -117,7 +111,7 @@ public:
     uint64_t getUndeletedEntries() {
         return numAlloc - numFree;
     }
-    
+
     /** Counter:  Number of times elements have been allocated */
     std::atomic<uint64_t> numAlloc;
     /** Counter:  Number times elements have been freed */
@@ -127,22 +121,22 @@ public:
     size_t getElementSize() const { return elemSize; }
 
     const std::list<uint8_t*>& getArenas() { return arenas; }
-    
+
 private:
 
-	bool allocPool()
+    bool allocPool()
     {
         /* If already in progress, return */
         if ( allocating.exchange(1, std::memory_order_acquire) ) {
             return true;
         }
 
-        uint8_t *newPool = (uint8_t*)mmap(0, arenaSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+        uint8_t *newPool = (uint8_t*)mmap(nullptr, arenaSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
         if ( MAP_FAILED == newPool ) {
             allocating.store(0, std::memory_order_release);
             return false;
         }
-        std::memset(newPool, 0xFF, arenaSize); 
+        std::memset(newPool, 0xFF, arenaSize);
         arenas.push_back(newPool);
         size_t nelem = arenaSize / elemSize;
         for ( size_t i = 0 ; i < nelem ; i++ ) {
@@ -157,12 +151,12 @@ private:
         return true;
     }
 
-	size_t elemSize;
-	size_t arenaSize;
+    size_t elemSize;
+    size_t arenaSize;
 
     std::atomic<unsigned int> allocating;
-	FreeList<ThreadSafe::Spinlock> freeList;
-	std::list<uint8_t*> arenas;
+    FreeList<ThreadSafe::Spinlock> freeList;
+    std::list<uint8_t*> arenas;
 
 };
 
