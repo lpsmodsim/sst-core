@@ -342,7 +342,7 @@ static void start_simulation(uint32_t tid, SimThreadInfo_t &info, Core::ThreadSa
     barrier.wait();
 
     info.simulated_time = sim->getFinalSimTime();
-    // g_output.output(CALL_INFO,"Simulation time = %s\n",info.simulated_time.toStringBestSI().c_str());
+    g_output.output(CALL_INFO,"Simulation time = %llu\n",sim->getCurrentSimCycle());
     
     double end_time = sst_get_cpu_time();
     info.run_time = end_time - start_run;
